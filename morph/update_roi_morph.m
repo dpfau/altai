@@ -13,41 +13,44 @@ end
 q = length(ROI); % number of ROI from previous steps
 fprintf('...Found %d regional maxima',k);
 
-overlap = zeros(k,q,2);
+overlap = zeros(k,q);
 distance = zeros(k,q);
 for i = 1:k % Find which existing ROI fall within a watershed
-    pix = wtrshed==wtrshed_id(i);
+    region = wtrshed==wtrshed_id(i);
     for j = 1:q
         distance(i,j) = norm(ROI(j).pos-[x(i),y(i)]);
-        overlap(i,j,1) = nnz(pix&ROI(j).shape)/nnz(pix);
-        overlap(i,j,2) = nnz(pix&ROI(j).shape)/nnz(ROI(j).shape);
+        overlap(i,j) = any(region(:)&ROI(j).shape(:));
     end
 end
 new_roi = zeros(k,1);
 assignment = q+(1:k);
 intensity = regmax(logical(regmax));
 for i = 1:k
-    j = 0;
-    if any(distance(i,:) < params.regmax_dist) || any(overlap(i,:,1) > 0.5) || any(overlap(i,:,2) > 0.5)
-        j = find(distance(i,:) < 3);
-        if length(j) > 1
-            [~,j] = min(distance(i,:));
-        elseif isempty(j)
-            idx = find(overlap(i,:,1)>0.5 | overlap(i,:,2)>0.5);
-            pval = zeros(length(idx),1);
-            for j = 1:length(idx)
-                region = ROI(idx(j)).shape & wtrshed==wtrshed_id(i);
-                resid = (frame(region)/intensity(i) - ROI(idx(j)).shape(region))./sqrt(1./(params.prec*intensity(i)^2) + 1./ROI(idx(j)).prec(region)); % residual scaled so each pixel should be i.i.d. unit normal
-                pval(j) = 1 - chi2cdf(norm(resid)^2,nnz(region));
-            end
-            j = find(pval>params.pval);
-            if length(j) > 1 || isempty(j) % If you can't reject anything, it's probably so ambiguous that it's better to toss it out
-                j = 0;
-            else
-                j = idx(j);
-            end
-        end
+    j = 0; % Index of the ROI to be merged into, or 0 if there is nothing to merge into
+    if any(distance(i,:) < params.regmax_dist)
+        [~,j] = min(distance(i,:));
+%         idx = find(overlap(i,:,1)>0.5 | overlap(i,:,2)>0.5);
+%         pval = zeros(length(idx),1);
+%         for j = 1:length(idx)
+%             region = ROI(idx(j)).shape & wtrshed==wtrshed_id(i);
+%             resid = (frame(region)/intensity(i) - ROI(idx(j)).shape(region))./sqrt(1./(params.prec*intensity(i)^2) + 1./ROI(idx(j)).prec(region)); % residual scaled so each pixel should be i.i.d. unit normal
+%             pval(j) = 1 - chi2cdf(norm(resid)^2,nnz(region));
+%         end
+%         j = find(pval>params.pval);
+%         if length(j) > 1 || isempty(j) % If you can't reject anything, it's probably so ambiguous that it's better to toss it out
+%             j = 0;
+%         else
+%             j = idx(j);
+%         end
         assignment(i) = j;
+    elseif any(overlap(i,:))
+        idx = find(overlap(i,:));
+        region = wtrshed==wtrshed_id(i);
+        ROI_mat = cell2mat(arrayfun(@(x)ROI(x).shape(region),idx,'UniformOutput',0));
+        rates = pinv(ROI_mat)*frame(region); % approximate firing rate of each ROI inside that patch
+        resid = (frame(region)-ROI_mat*rates)./sqrt(1/params.prec + sum(cell2mat(arrayfun(@(x)rates(x)./ROI(x).prec(pix),idx,'UniformOutput',0)),2));
+        if 1 - chi2cdf(norm(resid)^2,nnz(region)) > params.pval
+        end
     end
     if j ~= 0
         ROI(j).shape = (ROI(j).prec .* ROI(j).shape + ...
