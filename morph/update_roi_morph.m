@@ -28,9 +28,9 @@ intensity = regmax(logical(regmax)); % Height of the regional maxima.
 if nROI > 0
     ROI_mat = cell2mat(arrayfun(@(x)x.shape(:),ROI,'UniformOutput',0));
     rates = pinv(ROI_mat)*frame(:);
-    resid_var = ones(numel(frame),1)/params.prec;
+    resid_var = params.var_offset*ones(numel(frame),1);
     for j = 1:nROI
-        resid_var(logical(ROI(j).prec)) = resid_var(logical(ROI(j).prec)) + rates(j)^2./ROI(j).prec(logical(ROI(j).prec));
+        resid_var(logical(ROI(j).prec)) = resid_var(logical(ROI(j).prec)) + params.var_slope*rates(j) + rates(j)^2./ROI(j).prec(logical(ROI(j).prec));
     end
     resid = (frame(:) - ROI_mat*rates)./sqrt(resid_var);
 else
@@ -38,10 +38,10 @@ else
 end
 for i = 1:nMax
     j = 0; % Index of the ROI to be merged into, or 0 if there is nothing to merge into
-    if any(distance(i,:) < params.regmax_dist)
-        [~,j] = min(distance(i,:));
-        assignment(i) = j;
-    elseif any(overlap(i,:))
+%     if any(distance(i,:) < params.regmax_dist)
+%         [~,j] = min(distance(i,:));
+%         assignment(i) = j;
+    if any(overlap(i,:))
         region = wtrshed(:)==wtrshed_id(i)&(sum(ROI_mat(:,overlap(i,:)),2)); % The region inside the watershed that is already included in other ROIs should not be significantly different from background noise, unless there is a new ROI in this watershed
         if 1 - chi2cdf(norm(resid(region))^2,nnz(region)) > params.pval % If it is not significantly different, we have to pick an ROI to merge it with. Let's go with the one that has the greatest power inside the region of overlap.
             idx = find(overlap(i,:));
@@ -53,21 +53,24 @@ for i = 1:nMax
             j = idx(jj);
         end
     end
+    % This whole section still needs to be updated to reflect the possible
+    % influence of multiple ROIs in one watershed
     if j ~= 0
         ROI(j).shape = (ROI(j).prec .* ROI(j).shape + ...
-            params.prec*intensity(i)*(wtrshed==wtrshed_id(i)) .* frame) ./ ...
-            (ROI(j).prec + params.prec*intensity(i)^2*(wtrshed==wtrshed_id(i)));
+            intensity(i)*(wtrshed==wtrshed_id(i)) .* resid /(params.var_offset + params.var_slope*intensity(i))) ./ ...
+            (ROI(j).prec + intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i)));
         ROI(j).shape(isnan(ROI(j).shape)) = 0;
         ROI(j).pos = (sum(ROI(j).intensity.^2) * ROI(j).pos + intensity(i).^2 * [x(i),y(i)])...
             /(sum(ROI(j).intensity.^2) + intensity(i).^2);
         ROI(j).intensity(t) = intensity(i);
-        ROI(j).prec = ROI(j).prec + params.prec*intensity(i)^2*(wtrshed==wtrshed_id(i));
+        ROI(j).prec = ROI(j).prec + intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i));
     else
         new_roi(i) = 1;
+        region = wtrshed==wtrshed_id(i);
         ROI(end+1).intensity = zeros(params.T,1);
         ROI(end).intensity(t) = intensity(i);
-        ROI(end).prec = params.prec*intensity(i)^2*(wtrshed==wtrshed_id(i));
-        ROI(end).shape = frame.*(wtrshed==wtrshed_id(i))/intensity(i);
+        ROI(end).prec = intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i));
+        ROI(end).shape = frame.*region/intensity(i);
         ROI(end).pos = [x(i),y(i)];
     end
 end
