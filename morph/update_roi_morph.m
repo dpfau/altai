@@ -38,10 +38,10 @@ else
 end
 for i = 1:nMax
     j = 0; % Index of the ROI to be merged into, or 0 if there is nothing to merge into
-%     if any(distance(i,:) < params.regmax_dist)
-%         [~,j] = min(distance(i,:));
-%         assignment(i) = j;
-    if any(overlap(i,:))
+    if any(distance(i,:) < params.regmax_dist)
+        [~,j] = min(distance(i,:));
+        assignment(i) = j;
+    elseif any(overlap(i,:))
         region = wtrshed(:)==wtrshed_id(i)&(sum(ROI_mat(:,overlap(i,:)),2)); % The region inside the watershed that is already included in other ROIs should not be significantly different from background noise, unless there is a new ROI in this watershed
         if 1 - chi2cdf(norm(resid(region))^2,nnz(region)) > params.pval % If it is not significantly different, we have to pick an ROI to merge it with. Let's go with the one that has the greatest power inside the region of overlap.
             idx = find(overlap(i,:));
@@ -57,7 +57,7 @@ for i = 1:nMax
     % influence of multiple ROIs in one watershed
     if j ~= 0
         ROI(j).shape = (ROI(j).prec .* ROI(j).shape + ...
-            intensity(i)*(wtrshed==wtrshed_id(i)) .* resid /(params.var_offset + params.var_slope*intensity(i))) ./ ...
+            intensity(i)*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i)) .* frame) ./ ...
             (ROI(j).prec + intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i)));
         ROI(j).shape(isnan(ROI(j).shape)) = 0;
         ROI(j).pos = (sum(ROI(j).intensity.^2) * ROI(j).pos + intensity(i).^2 * [x(i),y(i)])...
@@ -75,7 +75,7 @@ for i = 1:nMax
     end
 end
 
-fprintf('...Added %d new regions of interest\n',nnz(new_roi));
+fprintf('...Added %d new regions of interest',nnz(new_roi));
 
 if isfield(params,'optose') && params.optose == true
     h = zeros(nMax,1); % handles to the text objects in each frame
