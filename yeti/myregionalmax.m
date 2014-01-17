@@ -6,19 +6,21 @@ function regmax = myregionalmax(I)
 
 switch ndims(I)
     case 2
-	regmax = I(2:end-1,2:end-1)>0;
+        regmax = I(2:end-1,2:end-1)>0;
     case 3
-	regmax = I(2:end-1,2:end-1,2:end-1)>0;
+        regmax = I(2:end-1,2:end-1,2:end-1)>0;
+    otherwise
+        error('Getting too fancy there, boyo. Stick to 2 or 3 dimensional arrays')
 end
 
 for i = -1:1
     for j = -1:1
         switch ndims(I)
-	    case 2
-		if any([i,j])
-		    regmax = regmax & ...
-			I(2:end-1,2:end-1) >= I(i+(2:end-1),j+(2:end-1));
-		end
+            case 2
+                if any([i,j])
+                    regmax = regmax & ...
+                        I(2:end-1,2:end-1) >= I(i+(2:end-1),j+(2:end-1));
+                end
             case 3
                 for k = -1:1
                     if any([i,j,k])
@@ -26,8 +28,7 @@ for i = -1:1
                             I(2:end-1,2:end-1,2:end-1) >= I(i+(2:end-1),j+(2:end-1),k+(2:end-1));
                     end
                 end
-            otherwise
-                error('Getting too fancy there, boyo. Stick to 2 or 3 dimensional arrays')
         end
     end
 end
+regmax = padarray(regmax,ones(1,ndims(I)));
