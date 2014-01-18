@@ -11,7 +11,7 @@
 /*
  * Device code
  */
-void __global__ FastFilt(double const * const A,
+void __global__ TimesTwo(double const * const A,
                          double * const B,
                          int const N)
 {
