@@ -1,9 +1,12 @@
-function watershed = mywatershed(I,marker)
+function idx = mywatershed(I,seed)
+% An algorithn to compute one watershed basin starting from a seed. When
+% used to create a closure and passed to arrayfun with a gpuArray as the
+% second argument, is automatically executed in parallel on the GPU.
 
-idx = find(marker); % index of the pixels in all watersheds
-label = (1:length(idx))'; % watershed label for the particular pixel
 n = ndims(I);
 sz = size(I);
+
+idx = seed;
 switch n
     case 2
         [x,y] = ind2sub(sz,idx);
@@ -17,28 +20,24 @@ npix = 1; % number of pixels added to watershed in the last iteration
 while npix > 0
     % compute boundary of watershed
     boundary       = [];
-    boundary_label = [];
-    overlap_different = [];
     for i = -1:1
         for j = -1:1
             switch n
                 case 2
                     if any([i,j])
-                        [idx_shift, ia] = setdiff(sub2ind(sz,min(sz(1),max(1,x+i)),min(sz(2),max(1,y+j))),idx);
-                        [boundary, boundary_label, overlap_different] = grow_boundary(boundary, boundary_label, overlap_different, idx_shift, ia, I, label);
+                        idx_shift = setdiff(sub2ind(sz,min(sz(1),max(1,x+i)),min(sz(2),max(1,y+j))),idx);
+                        boundary = grow_boundary(boundary, idx_shift, I);
                     end
                 case 3
                     for k = -1:1
                         if any([i,j,k])
-                            [idx_shift, ia] = setdiff(sub2ind(sz,min(sz(1),max(1,x+i)),min(sz(2),max(1,y+j)),min(sz(3),max(1,z+k))),idx);
-                            [boundary, boundary_label, overlap_different] = grow_boundary(boundary, boundary_label, overlap_different, idx_shift, ia, I, label);
+                            idx_shift = setdiff(sub2ind(sz,min(sz(1),max(1,x+i)),min(sz(2),max(1,y+j)),min(sz(3),max(1,z+k))),idx);
+                            boundary = grow_boundary(boundary, idx_shift, I);
                         end
                     end
             end
         end
     end
-    [boundary,ia] = setdiff(boundary, overlap_different);
-    boundary_label = boundary_label(ia);
     switch n
         case 2
             [xb,yb]    = ind2sub(sz,boundary);
@@ -76,31 +75,18 @@ while npix > 0
     
     % if the maximum value is inside this watershed already, add the pixel to the watershed
     [in_watershed] = ismember(neighbor_idx,idx);
-    idx   = [idx;   boundary(in_watershed)];
-    label = [label; boundary_label(in_watershed)];
+    idx = [idx; boundary(in_watershed)];
     x = [x; xb(in_watershed)];
     y = [y; yb(in_watershed)];
     if n == 3
         z = [z; zb(in_watershed)];
     end
     npix = nnz(in_watershed);
-    fprintf('.')
 end
-fprintf('\n')
-watershed = sparse(idx,ones(size(idx)),label,numel(I),1);
 
-function [boundary, boundary_label, overlap_different] = grow_boundary(boundary, boundary_label, overlap_different, idx_shift, ia, I, label)
+function boundary = grow_boundary(boundary, idx_shift, I)
 
-label_shift = label(ia);
-
-nonzero = I(idx_shift)>0;
-idx_shift   = idx_shift(nonzero);
-label_shift = label_shift(nonzero);
-
-[overlap, loc] = ismember(idx_shift,boundary);
-overlap_different_idx = overlap;
-overlap_different_idx(overlap) = boundary_label(loc(overlap)) ~= label_shift(overlap);
-overlap_different = [overlap_different; idx_shift(overlap_different_idx)];
-
-boundary       = [boundary;       idx_shift(~overlap)];
-boundary_label = [boundary_label; label_shift(~overlap)];
+nonzero   = I(idx_shift)>0;
+idx_shift = idx_shift(nonzero);
+overlap   = ismember(idx_shift,boundary);
+boundary  = [boundary; idx_shift(~overlap)];
