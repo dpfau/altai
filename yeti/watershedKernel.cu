@@ -49,14 +49,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                                           for (int kk=0; kk < npix; kk++) {
                                               if (idx[kk]==neighbor_idx) {
                                                   if ( (npix + dpix) % MEM_BLOCK == 0 ) {
-                                                      int * bigger_idx = (int *)realloc(idx, npix + dpix + MEM_BLOCK);
-                                                      if (bigger_idx != NULL) {
-                                                          idx = bigger_idx;
-                                                      } else {
-                                                          free(idx);
-                                                          puts("Error reallocating memory");
-                                                          exit(1);
-                                                      }
+                                                      idx = myrealloc(idx, npix + dpix, npix + dpix + MEM_BLOCK);
                                                   }
                                                   idx[npix + dpix++] = new_idx;
                                                   break;
@@ -79,4 +72,17 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
 
         free(idx);
     }
+}
+
+__device__ int * myrealloc(int * old, int oldsize, int newsize)
+{
+    int * newT = (int *) malloc (newsize*sizeof(int));
+
+    for(int i=0; i<oldsize; i++)
+    {
+        newT[i] = old[i];
+    }
+
+    free(old);
+    return newT;
 }
