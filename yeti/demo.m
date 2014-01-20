@@ -12,6 +12,6 @@ for t = 1
     clear gpuData; % save space on the GPU
     gpuRegmax = myregionalmax(gpuDataBlur-params.thresh);
     fprintf('R');
-    gpuWatershed = feval(watershedKern, gpuDataBlur-params.thresh, seed);
+    gpuWatershed = feval(watershedKern, gpuDataBlur-params.thresh, uint32(find(regmax)));
     fprintf('W');
 end
