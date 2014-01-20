@@ -44,6 +44,60 @@ __device__ int offsetIndex(const int idx, const int * offset, const int * dims, 
     return 0;
 }
 
+__device__ int checkOneNeighbor(const float * A, int idx, int old_idx, const int * offset, const int * dims, const int ndims) {
+    if ( checkIndex(idx, offset, dims, ndims) ) {
+        int new_idx = offsetIndex(idx, offset, dims, ndims);
+        if (A[new_idx] > A[old_idx]) {
+             return new_idx;
+        } else {
+          return old_idx;
+        }
+    } 
+}
+
+__device__ int checkOneIndex(const float * A, int * idx, int q, int * offset, const int * dims, const int ndims, int npix, int dpix) {
+    if ( checkIndex(idx[q], offset, dims, ndims) ) { // check that index is within bounds
+        int new_idx = offsetIndex(idx[q], offset, dims, ndims);
+        for (int qq=0; qq<npix; qq++) { 
+        // Check that index is not in the list. 
+        // Linear search is stupid and slow, but I'm not sure how to put a hash table inside CUDA device code
+            if (idx[qq]==new_idx) {
+                new_idx = -1;
+                break;
+            }
+        }
+        if (new_idx != -1) {
+            if (A[new_idx] > 0.0f) {
+                int neighbor_idx = new_idx;
+                for (int iii=-1; iii<=1; iii++) {
+                    for (int jjj=-1; jjj<=1; jjj++) {
+                       offset[0] = iii; offset[1] = jjj;
+                       switch (ndims) {
+                           case 2:
+                               neighbor_idx = checkOneNeighbor(A, new_idx, neighbor_idx, offset, dims, ndims);
+                           case 3:
+                           for (int kkk=-1; kkk<=1; kkk++) {
+                               offset[2] = kkk;
+                               neighbor_idx = checkOneNeighbor(A, new_idx, neighbor_idx, offset, dims, ndims);
+                           }
+                       }
+                    }
+                }
+                for (int qq=0; qq < npix; qq++) {
+                    if (idx[qq]==neighbor_idx) {
+                        if ( (npix + dpix) % MEM_BLOCK == 0 ) {
+                            idx = myrealloc(idx, npix + dpix, npix + dpix + MEM_BLOCK);
+                        }
+                        idx[npix + dpix++] = new_idx;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return dpix;
+}
+
 __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, const int N, const int ndims, const int * dims)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -60,83 +114,11 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                       switch(ndims) {
                           case 2:
                               int offset[] = {ii, jj};
-                              if ( checkIndex(idx[q], offset, dims, ndims) ) { // check that index is within bounds
-                                  int new_idx = offsetIndex(idx[q], offset, dims, ndims);
-                                  for (int qq=0; qq<npix; qq++) { 
-                                  // Check that index is not in the list. 
-                                  // Linear search is stupid and slow, but I'm not sure how to put a hash table inside CUDA device code
-                                      if (idx[qq]==new_idx) {
-                                          new_idx = -1;
-                                          break;
-                                      }
-                                  }
-                                  if (new_idx != -1) {
-                                      if (A[new_idx] > 0.0f) {
-                                          int neighbor_idx = new_idx;
-                                          for (int iii=-1; iii<=1; iii++) {
-                                              for (int jjj=-1; jjj<=1; jjj++) {
-                                                 if ( checkIndex(new_idx, offset, dims, ndims) ) {
-                                                    offset[0] = iii; offset[1] = jjj;
-                                                    int this_idx = offsetIndex(new_idx, offset, dims, ndims);
-                                                    if (A[this_idx] > A[neighbor_idx]) {
-                                                        neighbor_idx = this_idx;
-                                                    }
-                                                 } 
-                                              }
-                                          }
-                                          for (int qq=0; qq < npix; qq++) {
-                                              if (idx[qq]==neighbor_idx) {
-                                                  if ( (npix + dpix) % MEM_BLOCK == 0 ) {
-                                                      idx = myrealloc(idx, npix + dpix, npix + dpix + MEM_BLOCK);
-                                                  }
-                                                  idx[npix + dpix++] = new_idx;
-                                                  break;
-                                              }
-                                          }
-                                      }
-                                  }
-                              }
+                              dpix = checkOneIndex(A, idx, q, offset, dims, ndims, npix, dpix);
                           case 3:
                               for (int kk=-1; kk<=1; kk++) {
                                   int offset[] = {ii, jj, kk};
-                                  if ( checkIndex(idx[q], offset, dims, ndims) ) { // check that index is within bounds
-                                      int new_idx = offsetIndex(idx[q], offset, dims, ndims);
-                                      for (int qq=0; qq<npix; qq++) { 
-                                      // Check that index is not in the list. 
-                                      // Linear search is stupid and slow, but I'm not sure how to put a hash table inside CUDA device code
-                                          if (idx[qq]==new_idx) {
-                                              new_idx = -1;
-                                              break;
-                                          }
-                                      }
-                                      if (new_idx != -1) {
-                                          if (A[new_idx] > 0.0f) {
-                                              int neighbor_idx = new_idx;
-                                              for (int iii=-1; iii<=1; iii++) {
-                                                  for (int jjj=-1; jjj<=1; jjj++) {
-                                                      for (int kkk=-1; kkk<=1; kkk++) {
-                                                          if ( checkIndex(new_idx, offset, dims, ndims)) {
-                                                              offset[0] = iii; offset[1] = jjj; offset[2] = kkk;
-                                                              int this_idx = offsetIndex(new_idx, offset, dims, ndims);
-                                                              if (A[this_idx] > A[neighbor_idx]) {
-                                                                  neighbor_idx = this_idx;
-                                                              }
-                                                          } 
-                                                      }
-                                                  }
-                                              }
-                                              for (int qq=0; qq < npix; qq++) {
-                                                  if (idx[qq]==neighbor_idx) {
-                                                      if ( (npix + dpix) % MEM_BLOCK == 0 ) {
-                                                          idx = myrealloc(idx, npix + dpix, npix + dpix + MEM_BLOCK);
-                                                      }
-                                                      idx[npix + dpix++] = new_idx;
-                                                      break;
-                                                  }
-                                              }
-                                          }
-                                      }
-                                  }
+                                  dpix = checkOneIndex(A, idx, q, offset, dims, ndims, npix, dpix);
                               }
                       }
                   }
