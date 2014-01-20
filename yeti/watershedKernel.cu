@@ -6,6 +6,19 @@
 
 #define MEM_BLOCK 512
 
+__device__ int * myrealloc(int * old, int oldsize, int newsize)
+{
+    int * newT = (int *) malloc (newsize*sizeof(int));
+
+    for(int i=0; i<oldsize; i++)
+    {
+        newT[i] = old[i];
+    }
+
+    free(old);
+    return newT;
+}
+
 __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, const int N, const int ndims, const int * dims)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -72,17 +85,4 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
 
         free(idx);
     }
-}
-
-__device__ int * myrealloc(int * old, int oldsize, int newsize)
-{
-    int * newT = (int *) malloc (newsize*sizeof(int));
-
-    for(int i=0; i<oldsize; i++)
-    {
-        newT[i] = old[i];
-    }
-
-    free(old);
-    return newT;
 }
