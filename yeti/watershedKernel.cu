@@ -29,6 +29,7 @@ __device__ int checkIndex(const int idx, const int * offset, const int * dims, c
                 && ((idx / dims[0]) % dims[1]) + offset[1] >= 0 && ((idx / dims[0]) % dims[1]) + offset[1] < dims[1] 
                 && (idx / (dims[0] * dims[1])) + offset[2] >= 0 && (idx / (dims[0] * dims[1])) + offset[2] < dims[2];
     }
+    return 0;
 }
 
 __device__ int offsetIndex(int idx, int * offset, int * dims, int ndims) {
@@ -40,6 +41,7 @@ __device__ int offsetIndex(int idx, int * offset, int * dims, int ndims) {
                 dims[0] *           (((idx / dims[0]) % dims[1]) + offset[1]) + 
                 dims[0] * dims[1] * ((idx / (dims[0] * dims[1])) + offset[2]);
     }
+    return 0;
 }
 
 __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, const int N, const int ndims, const int * dims)
@@ -50,7 +52,6 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
         int npix = 1; // number of pixels in the watershed
         int dpix = 1; // change in number of pixels in this loop
         idx[0] = seedIdx[i];
-        int offset[ndims];
         while (dpix > 0) {
             dpix = 0;
             for (int q=0; q<npix; q++) {
@@ -58,7 +59,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                   for (int jj=-1; jj<=1; jj++) {
                       switch(ndims) {
                           case 2:
-                              offset[0] = ii; offset[1] = jj;
+                              int offset[] = {ii, jj};
                               if ( checkIndex(idx[q], offset, dims, ndims) ) { // check that index is within bounds
                                   int new_idx = offsetIndex(idx[q], offset, dims, ndims);
                                   for (int qq=0; qq<npix; qq++) { 
@@ -97,7 +98,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                               }
                           case 3:
                               for (int kk=-1; kk<=1; kk++) {
-                                  offset[0] = ii; offset[1] = jj; offset[2] = kk;
+                                  int offset[] = {ii, jj, kk};
                                   if ( checkIndex(idx[q], offset, dims, ndims) ) { // check that index is within bounds
                                       int new_idx = offsetIndex(idx[q], offset, dims, ndims);
                                       for (int qq=0; qq<npix; qq++) { 
