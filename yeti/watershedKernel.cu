@@ -19,7 +19,7 @@ __device__ int * myrealloc(int * old, int oldsize, int newsize)
     return newT;
 }
 
-__device__ int checkIndex(const int idx, int * offset, int * dims, const int ndims) {
+__device__ int checkIndex(const int idx, const int * offset, const int * dims, const int ndims) {
     switch (ndims) {
         case 2:
             return (idx % dims[0]) + offset[0] >= 0 && (idx % dims[0]) + offset[0] < dims[0]
@@ -32,7 +32,7 @@ __device__ int checkIndex(const int idx, int * offset, int * dims, const int ndi
     return 0;
 }
 
-__device__ int offsetIndex(int idx, int * offset, int * dims, int ndims) {
+__device__ int offsetIndex(const int idx, const int * offset, const int * dims, const int ndims) {
     switch (ndims) {
         case 2:
             return (idx % dims[0]) + offset[0] + dims[0] * ((idx / dims[0]) + offset[1]);
