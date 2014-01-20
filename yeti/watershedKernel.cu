@@ -52,7 +52,8 @@ __device__ int checkOneNeighbor(const float * A, int idx, int old_idx, const int
         } else {
           return old_idx;
         }
-    } 
+    }
+    return old_idx; 
 }
 
 __device__ int checkOneIndex(const float * A, int * idx, int q, int * offset, const int * dims, const int ndims, int npix, int dpix) {
