@@ -33,7 +33,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                                       }
                                   }
                                   if (new_idx != -1) {
-                                      if (A[idx] > 0) {
+                                      if (A[new_idx] > 0.0f) {
                                           int neighbor_idx = new_idx;
                                           for (int iii=-1; iii<=1; iii++) {
                                               for (int jjj=-1; jjj<=1; jjj++) {
@@ -49,7 +49,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
                                           for (int kk=0; kk < npix; kk++) {
                                               if (idx[kk]==neighbor_idx) {
                                                   if ( (npix + dpix) % MEM_BLOCK == 0 ) {
-                                                      bigger_idx = (int *)realloc(idx, npix + dpix + MEM_BLOCK);
+                                                      int * bigger_idx = (int *)realloc(idx, npix + dpix + MEM_BLOCK);
                                                       if (bigger_idx != NULL) {
                                                           idx = bigger_idx;
                                                       } else {
