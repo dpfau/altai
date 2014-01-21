@@ -1,6 +1,6 @@
 params.sig = 5;
 params.dz = 12.5;
-params.thresh = 0.012;
+params.thresh = 0.011;
 params.sz = [1472,2048,41];
 
 wtr = zeros(params.sz,'int32'); % initialize up front for speed
