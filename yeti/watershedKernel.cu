@@ -5,6 +5,7 @@
  */
 
 #define MEM_BLOCK 512
+#include <stdio.h>
 
 __device__ int * myrealloc(int * old, int oldsize, int newsize)
 {
@@ -108,6 +109,7 @@ __global__ void watershedKernel(const float * A, int * B, const int * seedIdx, c
         int dpix = 1; // change in number of pixels in this loop
         idx[0] = seedIdx[i];
         while (dpix > 0) {
+            printf("\n%d",npix);
             dpix = 0;
             for (int q=0; q<npix; q++) {
                for (int ii=-1; ii<=1; ii++) {
