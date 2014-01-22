@@ -1,3 +1,13 @@
+/*
+* Compute the watershed regions greater than zero. Useful when the watershed regions are
+* quite a small part of a large image, as it avoids doing any computation outside a
+* relevant region. Could be accelerated by using Boost's unordered_set insted of C++ STL
+* sets (constant vs. logarithmic insertion and checking), but works well for small watersheds.
+*
+*
+* David Pfau, 2014
+*/
+
 #include <set>
 #include <utility>
 #include "mex.h"
