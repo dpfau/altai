@@ -25,28 +25,28 @@ for i = 1:length(ROI)
     ROI(i).demixed = ROI(i).demixed/norm(ROI(i).demixed);
 end
 
-% Split any ROIs with multiple maxima
-filt = conj(fft2(make_blob(sz(1),sz(2),params.blobsize)));
-retain = true(length(ROI),1);
-for i = 1:length(ROI)
-    smoothed_ROI = ifftn(fftn(ROI(i).demixed).*filt);
-    smoothed_ROI = smoothed_ROI .* (smoothed_ROI>0.1*max(smoothed_ROI(:)));
-    regmax = imregionalmax(smoothed_ROI);
-    if nnz(regmax) > 1 % We accidentally merged two blobs into one ROI
-        retain(i) = false;
-        wtrshed = watershed(-smoothed_ROI).*uint8(smoothed_ROI~=0);
-        idx = find(regmax);
-        for j = 1:length(idx)
-            region = wtrshed==wtrshed(idx(j));
-            if nnz(region) > params.min_size
-                ROI(end+1).intensity = ROI(i).intensity;
-                ROI(end).prec = ROI(i).prec .* region;
-                ROI(end).shape = ROI(i).shape .* region;
-                [x,y] = ind2sub(size(ROI(end).shape),idx(j));
-                ROI(end).pos = [x,y];
-                ROI(end).demixed = ROI(i).demixed .* region;
-            end
-        end
-    end
-end
-ROI = ROI(retain);
+% % Split any ROIs with multiple maxima
+% filt = conj(fft2(make_blob(sz(1),sz(2),params.blobsize)));
+% retain = true(length(ROI),1);
+% for i = 1:length(ROI)
+%     smoothed_ROI = ifftn(fftn(ROI(i).demixed).*filt);
+%     smoothed_ROI = smoothed_ROI .* (smoothed_ROI>0.1*max(smoothed_ROI(:)));
+%     regmax = imregionalmax(smoothed_ROI);
+%     if nnz(regmax) > 1 % We accidentally merged two blobs into one ROI
+%         retain(i) = false;
+%         wtrshed = watershed(-smoothed_ROI).*uint8(smoothed_ROI~=0);
+%         idx = find(regmax);
+%         for j = 1:length(idx)
+%             region = wtrshed==wtrshed(idx(j));
+%             if nnz(region) > params.min_size
+%                 ROI(end+1).intensity = ROI(i).intensity;
+%                 ROI(end).prec = ROI(i).prec .* region;
+%                 ROI(end).shape = ROI(i).shape .* region;
+%                 [x,y] = ind2sub(size(ROI(end).shape),idx(j));
+%                 ROI(end).pos = [x,y];
+%                 ROI(end).demixed = ROI(i).demixed .* region;
+%             end
+%         end
+%     end
+% end
+% ROI = ROI(retain);
