@@ -21,11 +21,14 @@ for t = 1
     fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, gather(gpuRegmax));
     fprintf('.');
     if numROI > 0
-        residual = double(data); % As LSQR changes the data passed to it, this will eventually be the residual
+        residual = double(data); 
         rates = ratesfromframe(residual, ROIShapes, ROILocs, numROI);
         getResidual(data,residual,ROIShapes,ROILocs,rates);
     else
-        residual = data;
+        numROI = numROI + max(watersheds(:));
+        for i = 1:numROI
+            [ROILocs(1,i), ROILocs(2,i), ROILocs(3,i)] = ind2sub(params.sz,gpuRegmax(i))-floor(params.roiSz/2);
+        end
     end
     fprintf('.');
     fprintf('\n');
