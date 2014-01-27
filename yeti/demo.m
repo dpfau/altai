@@ -26,14 +26,14 @@ for t = 1
         residual = double(data); 
         rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI);
         getResidual(data,residual,ROIShapes,ROIOffset,rates);
-        % Again, this part could be a bottleneck when the number of ROIs is large, and it may make more sense to use a KD-tree like datastructure to store the ROI locations
+        % Want to use rangesearch here, since it uses KD-Trees under the hood
     else
         numROI = numROI + max(watersheds(:));
         for i = 1:numROI
             [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
             ROIOffset(:,i) = int32(ROICenter(:,i)-floor(params.roiSz/2)');
-            rng = arrayfun(@(x,y)x+(1:int32(y)),ROIOffset(:,i),params.roiSz','UniformOutput',0);
-            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==regmax(i));
+            rng = arrayfun(@(x,y)x+(0:int32(y)-1),ROIOffset(:,i),params.roiSz','UniformOutput',0);
+            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==i);
         end
     end
     fprintf('.');
