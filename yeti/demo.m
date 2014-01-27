@@ -1,8 +1,8 @@
 params.sig = 5;
 params.dz = 12.5;
 params.thresh = 0.011;
-params.sz = [1472,2048,41];
 params.roiSz = [40,40,3]; % Max size of an ROI
+params.sz = [1472,2048,41] + floor(params.roiSz/2); % don't forget the padding!
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,1e5]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
@@ -18,8 +18,9 @@ for t = 1
     fprintf('.');
     clear gpuData; % save space on the GPU
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
+    regmax = gather(gpuRegmax);
     fprintf('.');
-    fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, gather(gpuRegmax));
+    fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
     fprintf('.');
     if numROI > 0
         residual = double(data); 
@@ -29,10 +30,10 @@ for t = 1
     else
         numROI = numROI + max(watersheds(:));
         for i = 1:numROI
-            [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,gpuRegmax(i))
+            [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,gpuRegmax(i));
             ROIOffset(:,i) = int32(ROICenter(:,i)-floor(params.roiSz/2)');
             rng = arrayfun(@(x,y)x+(1:y),ROIOffset(:,i),params.roiSz,'UniformOutput',0);
-            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==gpuRegmax(i));
+            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==regmax(i));
         end
     end
     fprintf('.');
