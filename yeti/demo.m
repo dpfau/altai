@@ -7,10 +7,11 @@ params.roiSz = [40,40,3]; % Max size of an ROI
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,1e5]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
 ROIPrecs  = zeros([params.roiSz,1e5]); % the precision of each pixel in the ROI.
-ROILocs   = zeros(3,1e5,'int32'); % location of the ROIs.
+ROIOffset = zeros(3,1e5,'int32'); % Location of the ROIs. Fixed from the start, integer precision
+ROICenter = zeros(3,1e5); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 for t = 1
 	watersheds = zeros(params.sz,'int32');
-    data = loadframe(t);
+    data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
     fprintf('%d',t);
     gpuData = gpuArray(data);
     gpuDataBlur = blur(gpuData, [params.sig, params.sig, params.sig/params.dz]);
@@ -24,10 +25,14 @@ for t = 1
         residual = double(data); 
         rates = ratesfromframe(residual, ROIShapes, ROILocs, numROI);
         getResidual(data,residual,ROIShapes,ROILocs,rates);
+        % Again, this part could be a bottleneck when the number of ROIs is large, and it may make more sense to use a KD-tree like datastructure to store the ROI locations
     else
         numROI = numROI + max(watersheds(:));
         for i = 1:numROI
-            [ROILocs(1,i), ROILocs(2,i), ROILocs(3,i)] = ind2sub(params.sz,gpuRegmax(i))-floor(params.roiSz/2);
+            [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,gpuRegmax(i))
+            ROIOffset(:,i) = int32(ROICenter(:,i)-floor(params.roiSz/2)');
+            rng = arrayfun(@(x,y)x+(1:y),ROIOffset(:,i),params.roiSz,'UniformOutput',0);
+            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==gpuRegmax(i));
         end
     end
     fprintf('.');
