@@ -32,7 +32,7 @@ for t = 1
         for i = 1:numROI
             [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
             ROIOffset(:,i) = int32(ROICenter(:,i)-floor(params.roiSz/2)');
-            rng = arrayfun(@(x,y)x+(1:y),ROIOffset(:,i),params.roiSz,'UniformOutput',0);
+            rng = arrayfun(@(x,y)x+(1:y),ROIOffset(:,i),params.roiSz','UniformOutput',0);
             ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==regmax(i));
         end
     end
