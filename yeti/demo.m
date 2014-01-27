@@ -2,7 +2,7 @@ params.sig = 5;
 params.dz = 12.5;
 params.thresh = 0.011;
 params.roiSz = [40,40,3]; % Max size of an ROI
-params.sz = [1472,2048,41] + 2*(params.roiSz/2); % don't forget the padding!
+params.sz = [1472,2048,41] + 2*floor(params.roiSz/2); % don't forget the padding!
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,1e5]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
