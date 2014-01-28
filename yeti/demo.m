@@ -13,7 +13,7 @@ ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse a
 ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
 ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
-for t = 1
+for t = 100:110
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
     fprintf('%d',t);
