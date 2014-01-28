@@ -3,12 +3,16 @@ params.dz = 12.5;
 params.thresh = 0.011;
 params.roiSz = [40,40,3]; % Max size of an ROI
 params.sz = [1472,2048,41] + 2*floor(params.roiSz/2); % don't forget the padding!
+params.minDist = 3; % minimum distance below which two ROI are considered the same
+params.var = 1; % baseline variance
+params.varSlope = 0.001; % slope of the variance as a function of the intensity
+params.maxROI = 1e5;
 
 numROI = int32(0);
-ROIShapes = zeros([params.roiSz,1e5]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
-ROIPrecs  = zeros([params.roiSz,1e5]); % the precision of each pixel in the ROI.
-ROIOffset = zeros(3,1e5,'int32'); % Location of the ROIs. Fixed from the start, integer precision
-ROICenter = zeros(3,1e5); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
+ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
+ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
+ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
+ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 for t = 1
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
@@ -19,21 +23,52 @@ for t = 1
     clear gpuData; % save space on the GPU
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
     regmax = gather(gpuRegmax);
+    intensity = gather(gpuDataBlur(gpuRegmax));
     fprintf('.');
     fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
     fprintf('.');
+    % should probably drop this section into its own function
     if numROI > 0
+        assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
+        % Compute residual
         residual = double(data); 
         rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI);
         getResidual(data,residual,ROIShapes,ROIOffset,rates);
-        % Want to use rangesearch here, since it uses KD-Trees under the hood
+
+        % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
+        [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
+        [nearestNeighbors, nnDistance] = knnsearch(ROICenter(:,1:numROI)', [xRegmax,yRegmax,zRegmax], 'K', 1, 'NSMethod', 'kdtree', 'Distance', 'Mahalonobis', 'Cov', diag([1,1,1/params.dz^2]));
+        assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
+
+        % Get index of ROIs that overlap regional maxima
+        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax * params.dz], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'Chebyshev');
+        for i = 1:length(regmax)
+            if assignment(i) == 0
+
+            end
+        end
+
+        for i = 1:length(regmax)
+            if assignment(i) == 0 % create new ROI
+                if numROI > params.maxROI, pause; end
+
+                [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
+                ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
+                rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,numROI),params.roiSz','UniformOutput',0);
+                ROIShapes(:,:,:,numROI) = residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
+                ROIPrec(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+                numROI = numROI + 1;
+            else % merge ROI
+            end
+        end
     else
-        numROI = numROI + max(watersheds(:));
+        numROI = numROI + length(regmax);
         for i = 1:numROI
             [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
-            ROIOffset(:,i) = int32(ROICenter(:,i)-floor(params.roiSz/2)');
-            rng = arrayfun(@(x,y)x+(0:int32(y)-1),ROIOffset(:,i),params.roiSz','UniformOutput',0);
-            ROIShapes(:,:,:,i) = data(rng{:}).*(watersheds(rng{:})==i);
+            ROIOffset(:,i) = int32(ROICenter(:,i));
+            rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,i),params.roiSz','UniformOutput',0);
+            ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
+            ROIPrec(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
         end
     end
     fprintf('.');
