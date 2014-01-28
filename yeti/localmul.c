@@ -22,7 +22,6 @@ int localToGlobal(int * sub, const int * dims, int * offset, const int ndims) {
 }
 
 void localMultiply(int mode, int m, int n, double x[], double y[], void *UsrWrk) {
-    // Wrapper around matrix multiplication in the format required by lsqr
     param * p = (param *) UsrWrk;
     int q = 1;
     int i, j;
@@ -30,11 +29,11 @@ void localMultiply(int mode, int m, int n, double x[], double y[], void *UsrWrk)
         q *= p->localDims[i];
     }
 
-    int * foo = (int *) calloc(p->ndims,sizeof(int)); // the zero offset
-    int * sub = (int *) calloc(p->ndims,sizeof(int)); // subscripts at each step of the loop. better to allocate it once.
+    int * foo = (int *) calloc(p->ndims,sizeof(int)); /* the zero offset */
+    int * sub = (int *) calloc(p->ndims,sizeof(int)); /* subscripts at each step of the loop. better to allocate it once. */
     double A;
     int yIdx;
-    for (i = 0; i < q; i++) { // If we wanted to really knock things out of the park, maybe could parallelize this loop on GPU? But only in R2013b...
+    for (i = 0; i < q; i++) { /* If we wanted to really knock things out of the park, maybe could parallelize this loop on GPU? But only in R2013b... */
         for (j = 0; j < p->nROI; j++) {
             A = p->ROIs[i + j * q];
             if (A != 0) {

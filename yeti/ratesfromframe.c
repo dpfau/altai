@@ -18,11 +18,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     plhs[0] = mxCreateDoubleMatrix( (mwSize)p.nROI, 1, mxREAL );
     double * rates = mxGetPr( plhs[0] );
 
-    // create workspace variables
     double * v = (double *)malloc(sizeof(double) * p.nROI);
     double * w = (double *)malloc(sizeof(double) * p.nROI);
 
-    // Output-only variables requires by lsqr
     int istop_out;
     int itn_out;
     double anorm_out;
