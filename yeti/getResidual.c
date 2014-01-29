@@ -18,13 +18,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] ) {
     double * residual = mxGetPr( prhs[1] );
     double * rates = mxGetPr( prhs[4] );
 
-    for (int i = 0; i < mxGetNumberOfElements( prhs[0] ); i++) {
+    int i;
+    for (i = 0; i < mxGetNumberOfElements( prhs[0] ); i++) {
     	residual[i] = (double)frame[i];
     }
 
     double * negRates = (double *) malloc( p.nROI * sizeof(double) );
 
-    for (int i = 0; i < p.nROI; i++) {
+    for (i = 0; i < p.nROI; i++) {
     	negRates[i] = -1.0 * rates[i];
     }
 
