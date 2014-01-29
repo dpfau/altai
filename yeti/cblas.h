@@ -1,4 +1,4 @@
-fndef CBLAS_H
+#ifndef CBLAS_H
 #define CBLAS_H
 
 #include <stddef.h>
