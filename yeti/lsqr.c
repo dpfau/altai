@@ -49,11 +49,11 @@ void lsqr(
                         void *UsrWrk),
           double damp,
           void   *UsrWrk,
-          double u[],     // len = m
-          double v[],     // len = n
-          double w[],     // len = n
-          double x[],     // len = n
-          double se[],    // len at least n.  May be NULL.
+          double u[],     
+          double v[],     
+          double w[],     
+          double x[],     
+          double se[],    
           double atol,
           double btol,
           double conlim,
