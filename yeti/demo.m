@@ -7,12 +7,14 @@ params.minDist = 3; % minimum distance below which two ROI are considered the sa
 params.var = 1; % baseline variance
 params.varSlope = 0.001; % slope of the variance as a function of the intensity
 params.maxROI = 1e5;
+params.pval = 1e-14; % very strict.
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
 ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
 ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
+ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
 for t = 100:110
     tic
 	watersheds = zeros(params.sz,'int32');
@@ -38,20 +40,30 @@ for t = 100:110
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
-        zRegmax = zRegmax * params.dz;
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
-        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax], 'K', 1);
+        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax*params.dz], 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
         numNeighbors = nnz(nnDistance < params.minDist);
 
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
-        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
+        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax*params.dz], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         fprintf('N');
-        numResiduals = 0;
+        numChi2 = 0; % number of regional maxima merged into existing ROIs because they passed a Chi^2 test
         for i = 1:length(regmax)
             if assignment(i) == 0
+                % Get region within watershed that overlaps other ROIs
+                rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),[xRegmax(i),yRegmax(i),zRegmax(i)],params.roiSz,'UniformOutput',0);
+                region = false(size(watersheds));
+                for j = 1:length(allNeighbors{i})
+                    region(rng{:}) = region(rng{:}) | ROIShapes(:,:,:,allNeighbors{i}(j));
+                end
+                region = region & watersheds == i;
 
+                % See if residual passes Chi^2 test
+                if 1 - chi2cdf(norm(residual(region))^2,nnz(region)) > params.pval
+                    numChi2 = numChi2 + 1;
+                end
             end
         end
 
@@ -64,10 +76,21 @@ for t = 100:110
                 rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,numROI),params.roiSz','UniformOutput',0);
                 ROIShapes(:,:,:,numROI) = residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
                 ROIPrec(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+                ROIPower(numROI) = intensity(i)^2;
                 numROI = numROI + 1;
             else % merge ROI
+                j = assignment(i);
+                rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,j),params.roiSz','UniformOutput',0);
+                ROIShape(:,:,:,j) = (ROIPrec(:,:,:,j) .* ROIShape(:,:,:,j) + ...
+                    intensity(i)*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
+                (ROIPrec(:,:,:,j) + intensity(i)^2*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
+                ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * [xRegmax(i); yRegmax(i), zRegmax(i)])...
+                    /(ROIPower(j) + intensity(i).^2);
+                ROIPower(j) = ROIPower(j) + intensity(i)^2;
+                ROIPrec(:,:,:,j) = ROIPrec(:,:,:,j) + intensity(i)^2*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i));
             end
         end
+        ROIShape(isnan(ROIShape)) = 0;
     else
         numROI = numROI + length(regmax);
         for i = 1:numROI
@@ -76,9 +99,10 @@ for t = 100:110
             rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,i),params.roiSz','UniformOutput',0);
             ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
             ROIPrec(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
-            numNeighbors = 0;
-            numResiduals = 0;
         end
+        ROIPower(1:numROI) = intensity.^2;
+        numNeighbors = 0;
+        numChi2 = 0;
     end
-    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numResiduals, length(regmax)-numNeighbors-numResiduals, numROI, toc);
+    fprintf('\t Found %d regional maxima: %d neighbors, %d pass Chi^2, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numChi2, length(regmax)-numNeighbors-numChi2, numROI, toc);
 end
