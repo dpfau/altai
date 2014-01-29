@@ -37,7 +37,7 @@ for t = 100:110
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
-        [nearestNeighbors, nnDistance] = knnsearch(ROICenter(:,1:numROI)', [xRegmax,yRegmax,zRegmax], 'K', 1, 'NSMethod', 'kdtree', 'Distance', 'Mahalonobis', 'Cov', diag([1,1,1/params.dz^2]));
+        [nearestNeighbors, nnDistance] = knnsearch(ROICenter(:,1:numROI)', [xRegmax,yRegmax,zRegmax], 'K', 1, 'NSMethod', 'kdtree', 'Distance', 'mahalanobis', 'Cov', diag([1,1,1/params.dz^2]));
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
 
         % Get index of ROIs that overlap regional maxima
