@@ -32,9 +32,8 @@ for t = 100:110
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
         residual = double(data); fprintf('.');
-        rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI);
-        fprintf('R');
-        getResidual(data,residual,ROIShapes,ROIOffset,rates);
+        rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI); fprintf('.');
+        getResidual(data,residual,ROIShapes,ROIOffset,rates); fprintf('R');
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
