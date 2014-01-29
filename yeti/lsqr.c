@@ -15,7 +15,7 @@
 #ifdef __APPLE__
   #include <Accelerate/Accelerate.h>
 #else
-  #include <cblas.h>
+  #include <gsl/gsl_cblas.h>
 #endif
 
 #define ZERO   0.0
