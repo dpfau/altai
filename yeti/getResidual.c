@@ -2,9 +2,10 @@
 #include "localmul.h"
 
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] ) {
-	// Because each frame is stored to single precision to fit in GPU memory, but LSQR works on double precision,
-	// we have to make lots of copies of the data, which is slow. To quickly compute the residual after running
-	// LSQR, we use already-allocated memory, even though that leads to an odd mixing of float and double types
+	/* Because each frame is stored to single precision to fit in GPU memory, but LSQR works on double precision,
+	 * we have to make lots of copies of the data, which is slow. To quickly compute the residual after running
+	 * LSQR, we use already-allocated memory, even though that leads to an odd mixing of float and double types
+     */
 	param p;
     p.ndims = mxGetNumberOfDimensions( prhs[0] );
     p.localDims  = mxGetDimensions( prhs[2] );
