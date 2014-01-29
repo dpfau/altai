@@ -41,11 +41,13 @@ for t = 100:110
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
         [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax], 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
+        numNeighbors = nnz(nnDistance < params.minDist);
 
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
         allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         fprintf('N');
+        numResiduals = 0;
         for i = 1:length(regmax)
             if assignment(i) == 0
 
@@ -73,7 +75,9 @@ for t = 100:110
             rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,i),params.roiSz','UniformOutput',0);
             ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
             ROIPrec(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+            numNeighbors = 0;
+            numResiduals = 0;
         end
     end
-    fprintf('A\n');
+    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI\n', length(regmax), , ,numROI);
 end
