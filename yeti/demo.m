@@ -14,6 +14,7 @@ ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel i
 ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 for t = 100:110
+    tic
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
     fprintf('%d: ',t);
@@ -79,5 +80,5 @@ for t = 100:110
             numResiduals = 0;
         end
     end
-    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI\n', length(regmax), numNeighbors, numResiduals, length(regmax)-numNeighbors-numResiduals, numROI);
+    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numResiduals, length(regmax)-numNeighbors-numResiduals, numROI, toc);
 end
