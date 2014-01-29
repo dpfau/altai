@@ -39,6 +39,7 @@ for t = 100:110
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
         zRegmax = zRegmax * params.dz;
+        warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
         [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax], 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
 
