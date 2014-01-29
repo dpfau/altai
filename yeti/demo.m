@@ -42,7 +42,7 @@ for t = 100:110
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
 
         % Get index of ROIs that overlap regional maxima
-        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'Chebyshev');
+        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         for i = 1:length(regmax)
             if assignment(i) == 0
 
