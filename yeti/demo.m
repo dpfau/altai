@@ -16,33 +16,36 @@ ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double 
 for t = 100:110
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
-    fprintf('%d',t);
+    fprintf('%d: ',t);
     gpuData = gpuArray(data);
     gpuDataBlur = blur(gpuData, [params.sig, params.sig, params.sig/params.dz]);
-    fprintf('.');
+    fprintf('B');
     clear gpuData; % save space on the GPU
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
     regmax = gather(gpuRegmax);
     intensity = gather(gpuDataBlur(gpuRegmax));
-    fprintf('.');
+    fprintf('M');
     fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
-    fprintf('.');
+    fprintf('W');
     % should probably drop this section into its own function
     if numROI > 0
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
-        residual = double(data); 
+        residual = double(data); fprintf('.');
         rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI);
+        fprintf('R');
         getResidual(data,residual,ROIShapes,ROIOffset,rates);
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
         zRegmax = zRegmax * params.dz;
-        [nearestNeighbors, nnDistance] = knnsearch(ROICenter(:,1:numROI)', [xRegmax,yRegmax,zRegmax], 'K', 1);
+        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax], 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
 
         % Get index of ROIs that overlap regional maxima
+        warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
         allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
+        fprintf('N');
         for i = 1:length(regmax)
             if assignment(i) == 0
 
@@ -72,6 +75,5 @@ for t = 100:110
             ROIPrec(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
         end
     end
-    fprintf('.');
-    fprintf('\n');
+    fprintf('A\n');
 end
