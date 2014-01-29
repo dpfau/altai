@@ -79,5 +79,5 @@ for t = 100:110
             numResiduals = 0;
         end
     end
-    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI\n', length(regmax), numNeighbors, numResiduals,numROI);
+    fprintf('\t Found %d regional maxima: %d neighbors, %d residuals, %d new, %d total ROI\n', length(regmax), numNeighbors, numResiduals, length(regmax)-numNeighbors-numResiduals, numROI);
 end
