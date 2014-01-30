@@ -57,7 +57,11 @@ for t = 100:110
             rng = ROIRng(ROIOffset(:,i));
             residVarUpdate = params.var * rates(i) * logical(ROIPrecs(:,:,:,i)) + rates(i)^2./ROIPrecs(:,:,:,i);
             residVarUpdate(~logical(ROIPrecs(:,:,:,i))) = 0;
-            residVar(rng{:}) = residVar(rng{:}) + residVarUpdate;
+            try
+                residVar(rng{:}) = residVar(rng{:}) + residVarUpdate;
+            catch e
+                disp(e);
+            end
         end
         residual = residual ./ sqrt(residVar);
         fprintf('R');
