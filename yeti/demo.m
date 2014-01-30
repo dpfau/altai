@@ -18,7 +18,7 @@ ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
 OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 
 vec = @(x)x(:);
-ROIRng = @(x) arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),x,params.roiSz','UniformOutput',0);
+ROIRng = @(x) arrayfun(@(x,y)x-int32(floor(y/2))+(0:int32(y)-1),x,params.roiSz','UniformOutput',0);
 
 for t = 100:110
     tic
@@ -33,7 +33,7 @@ for t = 100:110
     numRegmax = length(regmax);
     [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
     regmaxSub = [xRegmax,yRegmax,zRegmax];
-    inBounds = ~any( regmaxSub + floor(params.roiSz(ones(numRegmax,1),:)/2)<0 | regmaxSub + floor(params.roiSz(ones(numRegmax,1),:)/2)>params.sz(ones(numRegmax,1),:), 2 );
+    inBounds = ~any( regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))<0 | regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))>params.sz(ones(numRegmax,1),:), 2 );
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
