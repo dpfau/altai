@@ -79,12 +79,10 @@ for t = 100:110
                     % Assign regional maximum to ROI with greatest power
                     pow = zeros(length(allNeighbors{i}),1);
                     for ii = 1:length(allNeighbors{i})
-                        rng = ROIRng(ROIOffset(:,allNeighbors{i}(ii)));
-                        try
-                            pow(ii) = norm(rates(allNeighbors{i}(ii))*vec(ROIShapes(region(rng{:}),allNeighbors{i}(ii))));
-                        catch e
-                            disp(e)
-                        end
+                        idx = allNeighbors{i}(ii);
+                        rng = ROIRng(ROIOffset(:,idx));
+                        ROIShape = ROIShapes(:,:,:,idx);
+                        pow(ii) = norm(rates(idx)*vec(ROIShape(region(rng{:}))));
                     end
                     [~,jj] = max(pow);
                     assignment(i) = allNeighbors{i}(jj);
