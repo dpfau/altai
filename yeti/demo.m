@@ -55,12 +55,8 @@ for t = 100:110
         residVar = params.var*ones(size(residual));
         for i = 1:numROI
             rng = ROIRng(ROIOffset(:,i));
-            try
-                residVarUpdate = params.var * rates(i) * logical(ROIPrec(:,:,:,i)) + rates(i)^2./ROIPrec(:,:,:,i);
-            catch e
-                disp(e)
-            end
-            residVarUpdate(~logical(ROIPrec(:,:,:,i))) = 0;
+            residVarUpdate = params.var * rates(i) * logical(ROIPrecs(:,:,:,i)) + rates(i)^2./ROIPrecs(:,:,:,i);
+            residVarUpdate(~logical(ROIPrecs(:,:,:,i))) = 0;
             residVar(rng{:}) = residVar(rng{:}) + residVarUpdate;
         end
         residual = residual ./ sqrt(residVar);
@@ -112,19 +108,19 @@ for t = 100:110
                 ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
                 rng = ROIRng(ROIOffset(:,numROI));
                 ROIShapes(:,:,:,numROI) = residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
-                ROIPrec(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+                ROIPrecs(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
                 ROIPower(numROI) = intensity(i)^2;
                 numROI = numROI + 1;
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
-                ROIShapes(:,:,:,j) = (ROIPrec(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
+                ROIShapes(:,:,:,j) = (ROIPrecs(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
                     intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
-                (ROIPrec(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
+                (ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
                 ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double([xRegmax(i); yRegmax(i); zRegmax(i)]))...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
-                ROIPrec(:,:,:,j) = ROIPrec(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i));
+                ROIPrecs(:,:,:,j) = ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i));
             end
         end
         ROIShapes(isnan(ROIShapes)) = 0;
@@ -135,7 +131,7 @@ for t = 100:110
             ROIOffset(:,i) = int32(ROICenter(:,i));
             rng = ROIRng(ROIOffset(:,i));
             ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
-            ROIPrec(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+            ROIPrecs(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
         end
         ROIPower(1:numROI) = intensity.^2;
         numNeighbors = 0;
