@@ -30,9 +30,10 @@ for t = 100:110
 
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
     regmax = gather(gpuRegmax);
+    numRegmax = length(regmax);
     [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
     regmaxSub = [xRegmax,yRegmax,zRegmax];
-    inBounds = ~any(bsxfun(@(x,y,z) (x-floor(z/2))<0 | (x+floor(z/2))>y,regmaxSub,params.sz,params.roiSz),2); % throw out ROIs
+    inBounds = ~any( regmaxSub + floor(params.roiSz(ones(numRegmax,1),:)/2)<0 | regmaxSub + floor(params.roiSz(ones(numRegmax,1),:)/2)>params.sz(ones(numRegmax,1),:), 2 );
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
