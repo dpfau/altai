@@ -80,7 +80,11 @@ for t = 100:110
                     pow = zeros(length(allNeighbors{i}),1);
                     for ii = 1:length(allNeighbors{i})
                         rng = ROIRng(ROIOffset(:,allNeighbors{i}(ii)));
-                        pow(ii) = norm(rates(allNeighbors{i}(ii))*vec(ROIShapes(region(rng{:}),allNeighbors{i}(ii))));
+                        try
+                            pow(ii) = norm(rates(allNeighbors{i}(ii))*vec(ROIShapes(region(rng{:}),allNeighbors{i}(ii))));
+                        catch e
+                            disp(e)
+                        end
                     end
                     [~,jj] = max(pow);
                     assignment(i) = allNeighbors{i}(jj);
