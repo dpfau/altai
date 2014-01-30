@@ -1,4 +1,4 @@
-function datablur = blur(data,sig)
+function data = blur(data,sig)
 % Anisotropic Gaussian blur. Works fine on regular matrices, but really shines on GPU.
 %
 % David Pfau, 2014
@@ -9,13 +9,14 @@ end
 assert(ndims(data)==length(sig));
 n = ndims(data);
 
-datablur = data;
 for i = 1:n
     x = size(data,i);
     idx = 1:n;
     idx(i) = 1;
     idx(1) = i;
     bump = gpuArray(exp(-fftshift(floor(-x/2):floor(x/2-1)).^2/sig(i)^2)'/sqrt(2*pi)/sig(i));
-    datablur = real(ifft(bsxfun(@times,fft(datablur,[],i),permute(fft(bump),idx)),[],i));
+    data = bsxfun(@times,fft(data,[],i),permute(fft(bump),idx));
+    data = ifft(data,[],i);
 end 
 
+data = real(data);
