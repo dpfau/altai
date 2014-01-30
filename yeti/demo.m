@@ -45,7 +45,11 @@ for t = 100:110
         residVar = params.var*ones(size(residual));
         for i = 1:numROI
             rng = ROIRng(ROIOffset(:,i));
-            residVarUpdate = params.var * rates(i) * logical(ROIPrec(:,:,:,i)) + rates(i)^2./ROIPrec(:,:,:,i);
+            try
+                residVarUpdate = params.var * rates(i) * logical(ROIPrec(:,:,:,i)) + rates(i)^2./ROIPrec(:,:,:,i);
+            catch e
+                disp(e)
+            end
             residVarUpdate(~logical(ROIPrec(:,:,:,i))) = 0;
             residVar(rng{:}) = residVar(rng{:}) + residVarUpdate;
         end
