@@ -9,6 +9,7 @@ params.varSlope = 0.001; % slope of the variance as a function of the intensity
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
 
+vec = @(x)x(:);
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
 ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
@@ -62,6 +63,14 @@ for t = 100:110
 
                 % See if residual passes Chi^2 test
                 if 1 - chi2cdf(norm(residual(region))^2,nnz(region)) > params.pval
+                    % Assign regional maximum to ROI with greatest power
+                    pow = zeros(length(allNeighbors{i}),1);
+                    for ii = 1:length(allNeighbors{i})
+                        rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,allNeighbors{i}(ii)),params.roiSz','UniformOutput',0);
+                        pow(ii) = norm(rates(allNeighbors{i}(ii))*ROIShapes(region(rng{:}),allNeighbors{i}(ii)));
+                    end
+                    [~,jj] = max(pow);
+                    assignment(i) = allNeighbors{i}(jj);
                     numChi2 = numChi2 + 1;
                 end
             end
