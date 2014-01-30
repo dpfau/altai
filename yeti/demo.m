@@ -61,7 +61,7 @@ for t = 100:110
 
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
-        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax*params.dz], max(params.sz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
+        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax*params.dz], max(params.roiSz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         fprintf('N');
         numChi2 = 0; % number of regional maxima merged into existing ROIs because they passed a Chi^2 test
         for i = 1:length(regmax)
