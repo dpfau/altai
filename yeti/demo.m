@@ -106,6 +106,7 @@ for t = 100:110
 
         for i = 1:length(regmax)
             if assignment(i) == 0 % create new ROI
+                numROI = numROI + 1;
                 if numROI > params.maxROI, pause; end
 
                 [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
@@ -114,7 +115,6 @@ for t = 100:110
                 ROIShapes(:,:,:,numROI) = residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
                 ROIPrecs(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
                 ROIPower(numROI) = intensity(i)^2;
-                numROI = numROI + 1;
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
