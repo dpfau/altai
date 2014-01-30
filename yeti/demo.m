@@ -67,7 +67,7 @@ for t = 100:110
                     pow = zeros(length(allNeighbors{i}),1);
                     for ii = 1:length(allNeighbors{i})
                         rng = arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),ROIOffset(:,allNeighbors{i}(ii)),params.roiSz','UniformOutput',0);
-                        pow(ii) = norm(rates(allNeighbors{i}(ii))*ROIShapes(region(rng{:}),allNeighbors{i}(ii)));
+                        pow(ii) = norm(rates(allNeighbors{i}(ii))*vec(ROIShapes(region(rng{:}),allNeighbors{i}(ii))));
                     end
                     [~,jj] = max(pow);
                     assignment(i) = allNeighbors{i}(jj);
