@@ -2,7 +2,7 @@ params.sig = 5;
 params.dz = 12.5;
 params.thresh = 0.011;
 params.roiSz = [40,40,3]; % Max size of an ROI
-params.sz = [1472,2048,41] + 2*floor(params.roiSz/2); % don't forget the padding!
+params.sz = [1024,2048,43];
 params.minDist = 3; % minimum distance below which two ROI are considered the same
 params.var = 1; % baseline variance
 params.varSlope = 0.001; % slope of the variance as a function of the intensity
@@ -15,6 +15,7 @@ ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel i
 ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
+OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 
 vec = @(x)x(:);
 ROIRng = @(x) arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),x,params.roiSz','UniformOutput',0);
@@ -22,16 +23,26 @@ ROIRng = @(x) arrayfun(@(x,y)x-floor(int32(y)/2)+(0:int32(y)-1),x,params.roiSz',
 for t = 100:110
     tic
 	watersheds = zeros(params.sz,'int32');
-    data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
+    data = padarray(loadframe(t),[0,0,1]); % pad the third dimenions, in case some ROIs bump against the edge (more likely than in the other two dimensions)
     fprintf('%d: ',t);
     gpuDataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
     fprintf('B');
+
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
     regmax = gather(gpuRegmax);
+    [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
+    regmaxSub = [xRegmax,yRegmax,zRegmax];
+    inBounds = ~any(bsxfun(@(x,y,z) (x-floor(z/2))<0 | (x+floor(z/2))>y,regmaxSub,params.sz,params.roiSz),2); % throw out ROIs
+    regmax = regmax(inBounds);
+    xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
+    regmaxSub = regmaxSub(inBounds,:);
     intensity = gather(gpuDataBlur(gpuRegmax));
+    OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
+
     fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
     fprintf('W');
+
     % should probably drop this section into its own function
     if numROI > 0
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
@@ -55,7 +66,6 @@ for t = 100:110
         fprintf('R');
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
-        [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
         [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax*params.dz], 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);

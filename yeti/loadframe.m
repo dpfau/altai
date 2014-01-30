@@ -12,7 +12,7 @@ for i = 1:41
     slice = fread(fid,'uint16');
     fclose(fid);
     data(:,:,i) = reshape(slice,1472,2048);
-    data([1,1472],[1,2048],:) = 15040; % For some reason the corners seem to be set to the max value. Undo that.
+    data = data(225:1248,:,:); % The animal is entirely within these bounds, so we can just throw out about 1/3rd of the data.
     if verbose, fprintf('.'); end
 end
 data = (single(data) - 15040)/2^16; % empirically, this seems to be where zero is
