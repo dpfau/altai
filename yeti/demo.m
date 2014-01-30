@@ -25,7 +25,7 @@ for t = 100:110
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),[0,0,1]); % pad the third dimenions, in case some ROIs bump against the edge (more likely than in the other two dimensions)
     fprintf('%d: ',t);
-    gpuDataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
+    gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
     fprintf('B');
 
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
