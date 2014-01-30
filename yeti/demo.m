@@ -24,10 +24,8 @@ for t = 100:110
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),floor(params.roiSz/2)); % Prevents ROIs from going over the edge of an image.
     fprintf('%d: ',t);
-    gpuData = gpuArray(data);
-    gpuDataBlur = blur(gpuData, [params.sig, params.sig, params.sig/params.dz]);
+    gpuDataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
     fprintf('B');
-    clear gpuData; % save space on the GPU
     gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
     regmax = gather(gpuRegmax);
     intensity = gather(gpuDataBlur(gpuRegmax));
