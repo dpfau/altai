@@ -105,16 +105,16 @@ for t = 100:110
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
-                ROIShape(:,:,:,j) = (ROIPrec(:,:,:,j) .* ROIShape(:,:,:,j) + ...
-                    intensity(i)*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
-                (ROIPrec(:,:,:,j) + intensity(i)^2*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
+                ROIShapes(:,:,:,j) = (ROIPrec(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
+                    intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
+                (ROIPrec(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
                 ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * [xRegmax(i); yRegmax(i), zRegmax(i)])...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
-                ROIPrec(:,:,:,j) = ROIPrec(:,:,:,j) + intensity(i)^2*(watershed(rng{:})==i)/(params.var + params.varSlope*intensity(i));
+                ROIPrec(:,:,:,j) = ROIPrec(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i));
             end
         end
-        ROIShape(isnan(ROIShape)) = 0;
+        ROIShapes(isnan(ROIShapes)) = 0;
     else
         numROI = numROI + length(regmax);
         for i = 1:numROI
