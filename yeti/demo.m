@@ -1,11 +1,11 @@
 params.sig = 5;
 params.dz = 12.5;
-params.thresh = 0.011;
+params.thresh = 0.01;
 params.roiSz = [40,40,3]; % Max size of an ROI
 params.sz = [1024,2048,43];
 params.minDist = 3; % minimum distance below which two ROI are considered the same
-params.var = 1; % baseline variance
-params.varSlope = 0.001; % slope of the variance as a function of the intensity
+params.var = 2e-5; % baseline variance
+params.varSlope = 0; % slope of the variance as a function of the intensity
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
 
@@ -25,11 +25,18 @@ for t = 100:110
 	watersheds = zeros(params.sz,'int32');
     data = padarray(loadframe(t),[0,0,1]); % pad the third dimenions, in case some ROIs bump against the edge (more likely than in the other two dimensions)
     fprintf('%d: ',t);
-    gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
-    fprintf('B');
+    try gpuDevice
+        gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
+        fprintf('B');
 
-    gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
-    regmax = gather(gpuRegmax);
+        gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
+        regmax = gather(gpuRegmax);
+    catch
+        dataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
+        fprintf('B');
+
+        regmax = int32(find(myregionalmax(dataBlur-params.thresh)));
+    end
     numRegmax = length(regmax);
     [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
     regmaxSub = [xRegmax,yRegmax,zRegmax];
@@ -37,11 +44,19 @@ for t = 100:110
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
-    intensity = gather(gpuDataBlur(gpuRegmax));
+    try gpuDevice
+        intensity = gather(gpuDataBlur(gpuRegmax));
+    catch
+        intensity = dataBlur(gpuRegmax);
+    end
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
 
-    fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
+    try gpuDevice
+        fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
+    catch
+        fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+    end
     fprintf('W');
 
     % should probably drop this section into its own function
