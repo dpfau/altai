@@ -49,7 +49,7 @@ for t = 25:27
     try gpuDevice
         intensity = gather(gpuDataBlur(gpuRegmax));
     catch
-        intensity = dataBlur(gpuRegmax);
+        intensity = dataBlur(regmax);
     end
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
