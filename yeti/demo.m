@@ -65,9 +65,10 @@ for t = 25:27
     if numROI > 0
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
-        residual = double(data); fprintf('.');
-        rates = ratesfromframe(residual, ROIShapes, ROIOffset, numROI); fprintf('.');
-        getResidual(data,residual,ROIShapes,ROIOffset,rates); fprintf('.');
+%         residual = double(data); fprintf('.');
+%         rates = mexRatesFromFrame(residual, ROIShapes, ROIOffset, numROI); fprintf('.');
+%         mexGetResidual(data,residual,ROIShapes,ROIOffset,rates); fprintf('.');
+        [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI,params.roiSz');
         % Scale residual to be unit norm
         residVar = params.var*ones(size(residual));
         for i = 1:numROI
