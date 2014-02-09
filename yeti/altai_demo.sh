@@ -15,4 +15,4 @@
 #PBS -e localhost:/vega/stats/users/dbp2112/ahrens/results/
 
 echo "I'm going in!"
-matlab -nosplash -nodisplay -nodesktop -singleCompThread -r 'demo' > matoutfile
+matlab -nosplash -nodisplay -nodesktop -singleCompThread -r "demo" > matoutfile
