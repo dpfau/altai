@@ -175,9 +175,9 @@ for t = 25:29
             [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
             ROIOffset(:,i) = int32(ROICenter(:,i));
             rng = ROIRng(ROIOffset(:,i));
-            ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
+            ROIShapes(:,:,:,i) = tryGather( data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );
             if ~params.autoVar
-                ROIPrecs(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+                ROIPrecs(:,:,:,i) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
             end
         end
         ROIPower(1:numROI) = intensity.^2;
