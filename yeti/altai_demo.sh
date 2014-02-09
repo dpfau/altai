@@ -15,4 +15,4 @@
 #PBS -e localhost:/vega/stats/users/dbp2112/ahrens/results/
 
 echo "I'm going in!"
-matlab-R2012b -nosplash -nodisplay -nodesktop -r 'demo' > ../../results/matoutfile
+matlab -nosplash -nodisplay -nodesktop -r 'demo' > ../../results/matoutfile
