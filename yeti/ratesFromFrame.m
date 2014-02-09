@@ -5,6 +5,7 @@ if numROI > 1e3
     [rates,flag] = lsqr(@(x,mode)localMultiply(x,mode,ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)'),data(:),1e-6,250);
 else
     C = ROICov(ROIShapes(:,:,:,1:numROI),ROIOffset(:,1:numROI));
+    warning('off','MATLAB:singularMatrix');
     rates = C\localMultiply(data(:),'transp',ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)');
 end
 if nargout == 2
