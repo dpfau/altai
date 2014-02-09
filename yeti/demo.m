@@ -23,7 +23,7 @@ ROIRng = @(x) arrayfun(@(x,y)x-int32(floor(y/2))+(0:int32(y)-1),x,params.roiSz',
 for t = [25:1000,1:24]
     tic
 	watersheds = zeros(params.sz,'int32');
-    try gpuDevice;
+    if gpuDeviceCount
         data = padarray(loadframe(t),[0,0,1]); % pad the third dimenions, in case some ROIs bump against the edge (more likely than in the other two dimensions)
         fprintf('%d: ',t);
         gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
@@ -31,8 +31,7 @@ for t = [25:1000,1:24]
 
         gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
         regmax = gather(gpuRegmax);
-    catch
-	disp('I am very confused.');
+    else
         data = padarray(loadframe(t,'/Users/pfau/Documents/Research/ROI/Light Sheet Data/binary_data'),[0,0,1]);
         fprintf('%d: ',t);
         dataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
@@ -47,19 +46,19 @@ for t = [25:1000,1:24]
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
-    try gpuDevice;
+    if gpuDeviceCount
         intensity = gather(gpuDataBlur(gpuRegmax));
-    catch
+    else
         intensity = dataBlur(regmax);
     end
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
 
-    try gpuDevice;
+    if gpuDeviceCount
         fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
         clear gpuDataBlur
         watersheds = gpuArray(watersheds);
-    catch
+    else
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
     end
     fprintf('W');
@@ -69,9 +68,8 @@ for t = [25:1000,1:24]
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
         [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI);
-        try gpuDevice;
+        if gpuDeviceCount
             residual = gpuArray(residual);
-        catch e
         end
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
@@ -122,9 +120,9 @@ for t = [25:1000,1:24]
             if assignment(i) == 0
                 % Get region within watershed that overlaps other ROIs
                 rng = ROIRng([xRegmax(i);yRegmax(i);zRegmax(i)]);
-                try gpuDevice;
+                if gpuDeviceCount
                     region = gpuArray.false(size(watersheds));
-                catch e
+                else
                     region = false(size(watersheds));
                 end
                 for j = 1:length(allNeighbors{i})
