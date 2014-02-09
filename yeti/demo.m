@@ -20,7 +20,8 @@ OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 vec = @(x)x(:);
 ROIRng = @(x) arrayfun(@(x,y)x-int32(floor(y/2))+(0:int32(y)-1),x,params.roiSz','UniformOutput',0);
 
-for t = [25:1000,1:24]
+profile on
+for t = 25:29
     tic
 	watersheds = zeros(params.sz,'int32');
     try gpuDevice;
@@ -183,3 +184,4 @@ for t = [25:1000,1:24]
     end
     fprintf('\t Found %d regional maxima: %d neighbors, %d pass Chi^2, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numChi2, length(regmax)-numNeighbors-numChi2, numROI, toc);
 end
+profsave
