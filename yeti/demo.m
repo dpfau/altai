@@ -32,6 +32,7 @@ for t = [25:1000,1:24]
         gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
         regmax = gather(gpuRegmax);
     catch
+	disp('I am very confused.');
         data = padarray(loadframe(t,'/Users/pfau/Documents/Research/ROI/Light Sheet Data/binary_data'),[0,0,1]);
         fprintf('%d: ',t);
         dataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
