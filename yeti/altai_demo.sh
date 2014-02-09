@@ -5,7 +5,7 @@
 # Torque directives
 #PBS -N altai_demo
 #PBS -W group_list=yetistats
-#PBS -l nodes=1,walltime=24:00:00,mem=8gb,other=gpu
+#PBS -l nodes=1,walltime=1:00:00:00,mem=8192mb,other=gpu
 #PBS -M dbp2112@columbia.edu
 #PBS -m abe
 #PBS -V
@@ -15,4 +15,4 @@
 #PBS -e localhost:/vega/stats/users/dbp2112/ahrens/results/
 
 echo "I'm going in!"
-matlab -nosplash -nodisplay -nodesktop -r 'demo' > ../../results/matoutfile
+matlab -nosplash -nodisplay -nodesktop -singleCompThread -r 'demo' > matoutfile
