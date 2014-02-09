@@ -23,7 +23,7 @@ ROIRng = @(x) arrayfun(@(x,y)x-int32(floor(y/2))+(0:int32(y)-1),x,params.roiSz',
 for t = 25:27
     tic
 	watersheds = zeros(params.sz,'int32');
-    try gpuDevice
+    try gpuDevice;
         data = padarray(loadframe(t),[0,0,1]); % pad the third dimenions, in case some ROIs bump against the edge (more likely than in the other two dimensions)
         fprintf('%d: ',t);
         gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
@@ -46,7 +46,7 @@ for t = 25:27
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
-    try gpuDevice
+    try gpuDevice;
         intensity = gather(gpuDataBlur(gpuRegmax));
     catch
         intensity = dataBlur(regmax);
@@ -54,7 +54,7 @@ for t = 25:27
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
 
-    try gpuDevice
+    try gpuDevice;
         fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
     catch
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
