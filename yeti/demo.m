@@ -20,7 +20,7 @@ OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 vec = @(x)x(:);
 ROIRng = @(x) arrayfun(@(x,y)x-int32(floor(y/2))+(0:int32(y)-1),x,params.roiSz','UniformOutput',0);
 
-for t = 25:27
+for t = [25:1000,1:24]
     tic
 	watersheds = zeros(params.sz,'int32');
     try gpuDevice;
