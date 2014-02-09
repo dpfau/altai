@@ -88,14 +88,14 @@ for t = 25:29
                 region = watersheds==idx(i);
                 rng = ROIRng(ROIOffset(:,assignment(idx(i))));
                 region(rng{:}) = region(rng{:}) & ROIShapes(:,:,:,idx(i));
-                vars(i) = var(residual(region));
+                vars(i) = tryGather( var(residual(region)) );
             end
             foo = pinv([new_rates+new_rates.^2./old_rates, 1+new_rates.^2./old_rates.^2])*vars;
             params.var = foo(1);
             params.varSlope = foo(2);
             for i = 1:numROI
                 rng = ROIRng(ROIOffset(:,i));
-                ROIPrecs(:,:,:,i) = old_intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*old_intensity(i));
+                ROIPrecs(:,:,:,i) = tryGather( old_intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*old_intensity(i)) );
             end
         end
 
@@ -122,14 +122,18 @@ for t = 25:29
             if assignment(i) == 0
                 % Get region within watershed that overlaps other ROIs
                 rng = ROIRng([xRegmax(i);yRegmax(i);zRegmax(i)]);
-                region = false(size(watersheds));
+                try gpuDevice;
+                    region = gpuArray.false(size(watersheds));
+                catch e
+                    region = false(size(watersheds));
+                end
                 for j = 1:length(allNeighbors{i})
                     region(rng{:}) = region(rng{:}) | ROIShapes(:,:,:,allNeighbors{i}(j));
                 end
                 region = region & watersheds == i;
 
                 % See if residual passes Chi^2 test
-                if 1 - chi2cdf(norm(residual(region))^2,nnz(region)) > params.pval
+                if 1 - chi2cdf(tryGather(norm(residual(region))^2),tryGather(nnz(region))) > params.pval
                     % Assign regional maximum to ROI with greatest power
                     pow = zeros(length(allNeighbors{i}),1);
                     for ii = 1:length(allNeighbors{i})
@@ -153,19 +157,19 @@ for t = 25:29
                 [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
                 ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
                 rng = ROIRng(ROIOffset(:,numROI));
-                ROIShapes(:,:,:,numROI) = residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
-                ROIPrecs(:,:,:,numROI) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+                ROIShapes(:,:,:,numROI) = tryGather( residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );
+                ROIPrecs(:,:,:,numROI) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
                 ROIPower(numROI) = intensity(i)^2;
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
-                ROIShapes(:,:,:,j) = (ROIPrecs(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
+                ROIShapes(:,:,:,j) = tryGather( (ROIPrecs(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
                     intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
-                (ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)));
+                (ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i))) );
                 ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double([xRegmax(i); yRegmax(i); zRegmax(i)]))...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
-                ROIPrecs(:,:,:,j) = ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i));
+                ROIPrecs(:,:,:,j) = tryGather( ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
             end
         end
         ROIShapes(isnan(ROIShapes)) = 0;
