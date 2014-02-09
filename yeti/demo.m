@@ -194,4 +194,9 @@ for t = [25:1000,1:24]
     end
     fprintf('\t Found %d regional maxima: %d neighbors, %d pass Chi^2, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numChi2, length(regmax)-numNeighbors-numChi2, numROI, toc);
 end
+ROIShapes = ROIShapes(:,:,:,1:numROI);
+ROIPrecs  = ROIPrecs(:,:,:,1:numROI);
+ROIOffset = ROIOffset(:,:,:,1:numROI);
+ROICenter = ROICenter(:,:,:,1:numROI);
+ROIPower  = ROIPower(1:numROI);
 save ROI_results numROI ROIShapes ROIPrecs ROIOffset ROICenter ROIPower OutOfBounds
