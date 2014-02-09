@@ -5,7 +5,7 @@
 # Torque directives
 #PBS -N altai_demo
 #PBS -W group_list=yetistats
-#PBS -l nodes=1,walltime=1:00:00:00,mem=8192mb,other=gpu
+#PBS -l nodes=1,walltime=1:00:00:00,mem=8192mb
 #PBS -M dbp2112@columbia.edu
 #PBS -m abe
 #PBS -V
