@@ -1,11 +1,11 @@
+clear params
 params.sig = 5;
 params.dz = 12.5;
 params.thresh = 0.01;
 params.roiSz = [40,40,3]; % Max size of an ROI
 params.sz = [1024,2048,43];
 params.minDist = 3; % minimum distance below which two ROI are considered the same
-params.var = 2e-5; % baseline variance
-params.varSlope = 0; % slope of the variance as a function of the intensity
+params.autoVar = true; % automatically compute baseline variance and linear dependence on firing rate
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
 
@@ -65,10 +65,33 @@ for t = 25:27
     if numROI > 0
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
-%         residual = double(data); fprintf('.');
-%         rates = mexRatesFromFrame(residual, ROIShapes, ROIOffset, numROI); fprintf('.');
-%         mexGetResidual(data,residual,ROIShapes,ROIOffset,rates); fprintf('.');
-        [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI,params.roiSz');
+        [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI);
+
+        % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
+        warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
+        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax*params.dz], 'K', 1);
+        assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
+        numNeighbors = nnz(nnDistance < params.minDist);
+        if params.autoVar && ~isfield(params,'varSlope') % estimate the dependence of the variance on the firing rate
+            idx = find(nnDistance < params.minDist);
+            vars = zeros(numNeighbors,1);
+            old_rates = old_intensity(assignment(nnDistance < params.minDist));
+            new_rates = intensity(nnDistance < params.minDist);
+            for i = 1:numNeighbors
+                region = watersheds==idx(i);
+                rng = ROIRng(ROIOffset(:,assignment(idx(i))));
+                region(rng{:}) = region(rng{:}) & ROIShapes(:,:,:,idx(i));
+                vars(i) = var(residual(region));
+            end
+            foo = pinv([new_rates+new_rates.^2./old_rates, 1+new_rates.^2./old_rates.^2])*vars;
+            params.var = foo(1);
+            params.varSlope = foo(2);
+            for i = 1:numROI
+                rng = ROIRng(ROIOffset(:,i));
+                ROIPrecs(:,:,:,i) = old_intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*old_intensity(i));
+            end
+        end
+
         % Scale residual to be unit norm
         residVar = params.var*ones(size(residual));
         for i = 1:numROI
@@ -83,17 +106,10 @@ for t = 25:27
         end
         residual = residual ./ sqrt(residVar);
         fprintf('R');
-
-        % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
-        warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
-        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax*params.dz], 'K', 1);
-        assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
-        numNeighbors = nnz(nnDistance < params.minDist);
-
+        
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
         allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax*params.dz], max(params.roiSz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
-        fprintf('N');
         numChi2 = 0; % number of regional maxima merged into existing ROIs because they passed a Chi^2 test
         for i = 1:length(regmax)
             if assignment(i) == 0
@@ -153,11 +169,17 @@ for t = 25:27
             ROIOffset(:,i) = int32(ROICenter(:,i));
             rng = ROIRng(ROIOffset(:,i));
             ROIShapes(:,:,:,i) = data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i);
-            ROIPrecs(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+            if ~params.autoVar
+                ROIPrecs(:,:,:,i) = intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i));
+            end
         end
         ROIPower(1:numROI) = intensity.^2;
         numNeighbors = 0;
         numChi2 = 0;
+        % Automatically set the baseline variance
+        if params.autoVar
+            old_intensity = intensity; % save the intensity from the first frame to compute the dependence of variance on firing rate
+        end
     end
     fprintf('\t Found %d regional maxima: %d neighbors, %d pass Chi^2, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numChi2, length(regmax)-numNeighbors-numChi2, numROI, toc);
 end
