@@ -57,6 +57,8 @@ for t = 25:29
 
     try gpuDevice;
         fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
+        clear gpuDataBlur
+        gpuWatersheds = gpuArray(watersheds);
     catch
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
     end
@@ -67,6 +69,10 @@ for t = 25:29
         assignment = zeros(length(regmax),1); % index of ROI to assign regional maximum to, or 0 if it's a new ROI
         % Compute residual
         [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI);
+        try gpuDevice;
+            gpuResidual = gpuArray(residual);
+        catch e
+        end
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
