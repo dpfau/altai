@@ -58,7 +58,7 @@ for t = 25:29
     try gpuDevice;
         fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
         clear gpuDataBlur
-        gpuWatersheds = gpuArray(watersheds);
+        watersheds = gpuArray(watersheds);
     catch
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
     end
@@ -70,7 +70,7 @@ for t = 25:29
         % Compute residual
         [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI);
         try gpuDevice;
-            gpuResidual = gpuArray(residual);
+            residual = gpuArray(residual);
         catch e
         end
 
