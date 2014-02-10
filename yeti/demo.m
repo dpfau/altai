@@ -194,7 +194,7 @@ for t = 25:30
 end
 ROIShapes = ROIShapes(:,:,:,1:numROI);
 ROIPrecs  = ROIPrecs(:,:,:,1:numROI);
-ROIOffset = ROIOffset(:,:,:,1:numROI);
-ROICenter = ROICenter(:,:,:,1:numROI);
+ROIOffset = ROIOffset(:,1:numROI);
+ROICenter = ROICenter(:,1:numROI);
 ROIPower  = ROIPower(1:numROI);
 save ROI_results numROI ROIShapes ROIPrecs ROIOffset ROICenter ROIPower OutOfBounds
