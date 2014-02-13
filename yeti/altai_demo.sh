@@ -14,6 +14,6 @@
 #PBS -o localhost:/vega/stats/users/dbp2112/ahrens/results/
 #PBS -e localhost:/vega/stats/users/dbp2112/ahrens/results/
 
-matlab-R2012b -nosplash -nodisplay -nodesktop -r "demo" > matoutfile
+matlab-R2012b -nosplash -nodisplay -nodesktop -r "tRng = 25:100; demo" > matoutfile
 
 #End of script
