@@ -1,13 +1,13 @@
 function [rates,residual] = ratesFromFrame(data,ROIShapes,ROIOffset,numROI)
 
 roiSz = size(ROIShapes);
-if numROI > 1e3
-    [rates,flag] = lsqr(@(x,mode)localMultiply(x,mode,ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)'),data(:),1e-6,250);
-else
+% if numROI > 1e3 % While LSQR sounds nice, in practice it seems to be stupidly slow (at least the Matlab implementation)
+%     [rates,flag] = lsqr(@(x,mode)localMultiply(x,mode,ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)'),data(:),1e-6,250);
+% else
     C = ROICov(ROIShapes(:,:,:,1:numROI),ROIOffset(:,1:numROI));
     warning('off','MATLAB:singularMatrix');
     rates = C\localMultiply(data(:),'transp',ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)');
-end
+% end
 if nargout == 2
     residual = data - reshape(localMultiply(rates,'notransp',ROIShapes,ROIOffset,numROI,size(data),roiSz(1:3)'),size(data));
 end
