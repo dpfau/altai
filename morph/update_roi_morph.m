@@ -64,6 +64,7 @@ for i = 1:nMax
             /(sum(ROI(j).intensity.^2) + intensity(i).^2);
         ROI(j).intensity(t) = intensity(i);
         ROI(j).prec = ROI(j).prec + intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i));
+        ROI(j).poss = [ROI(j).poss; x(i), y(i), t]; % the position of all maxima for this ROI
     else
         new_roi(i) = 1;
         region = wtrshed==wtrshed_id(i);
@@ -72,6 +73,7 @@ for i = 1:nMax
         ROI(end).prec = intensity(i)^2*(wtrshed==wtrshed_id(i))/(params.var_offset + params.var_slope*intensity(i));
         ROI(end).shape = frame.*region/intensity(i);
         ROI(end).pos = [x(i),y(i)];
+        ROI(end).poss = [x(i),y(i),t];
     end
 end
 
