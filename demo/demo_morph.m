@@ -1,4 +1,4 @@
-data_flag = 2;
+data_flag = 1;
 sz = [400,150,100];
 if ~exist('data','var')
     if data_flag == 0

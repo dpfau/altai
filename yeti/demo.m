@@ -8,6 +8,7 @@ params.minDist = 3; % minimum distance below which two ROI are considered the sa
 params.autoVar = true; % automatically compute baseline variance and linear dependence on firing rate
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
+params.posVar = 5; % Variance in the ROI position. Should set higher than the actual variance, to be robust to noise, but still low enough that it stops outrageous things.
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
@@ -131,7 +132,9 @@ for t = [25:1000,1:24]
                 region = region & watersheds == i;
 
                 % See if residual passes Chi^2 test
-                if 1 - chi2cdf(tryGather(norm(residual(region))^2),tryGather(nnz(region))) > params.pval
+                error1 = tryGather(norm(residual(region))^2); % scale of the residual in the overlap between ROI and watershed
+                error2 = (ROICenter(:,nearestNeighbors(i))-[xRegmax(i),yRegmax(i),zRegmax(i)])'/diag([params.minDist^2, params.minDist^2, (params.minDist/params.dz)^2])*(ROICenter(:,nearestNeighbors(i))-[xRegmax(i),yRegmax(i),zRegmax(i)]); % scaled distance between the nearest neighbor ROI and the regional maximum
+                if (1 - chi2cdf(error1,tryGather(nnz(region)))) * (1 - chi2cdf(error2,3)) > params.pval
                     % Assign regional maximum to ROI with greatest power
                     pow = zeros(length(allNeighbors{i}),1);
                     for ii = 1:length(allNeighbors{i})
