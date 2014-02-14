@@ -1,0 +1,46 @@
+\documentclass[11pt]{amsart}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{Online Greedy ROI Detection}
+\author{David Pfau}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+%\section{}
+%\subsection{}
+
+The pipeline for ROI detection has 3 phases applied to each frame: identifying regional maxima in a single frame, removing ROIs identified in previous frames by regression, and merging regional maxima in one frame with ROIs previously identified. Once this has been applied to every frame in the data, ICA is applied to the uncovered ROIs to separate any overlapping neurons that may have been mistakenly identified as one ROI.
+
+Let $X=(x_1,\ldots,x_T)$ be the data with each time step arranged as a column, and let $y_k$ be the shape of the $k$th ROI, which is a mostly sparse vector. The generative model for voxel $i$ in frame $t$ is:
+\begin{equation}
+x_{it} \sim  \mathcal{N}\left(\sum_k y_{ik} r_{kt},\, \sigma^2 + \sum_k \rho r_{kt}\mathbb{I}(y_{ik})\right)
+\label{eqn:roi_generative_model}
+\end{equation}
+where $\mathbb{I}$ is an indicator function that is one for every nonzero entry in a vector, zero otherwise. The parameter $\rho$ gives the background noise a linear dependence on the firing rate of each neuron. This reflects the fact that the primary source of noise in fluorescent imaging is photon shot noise, which is Poisson distributed. We have found empirically that this parameter is necessary to correctly set the threshold for determining whether or not a new ROI is present. The variance parameters are currently set by hand but could potentially be automated.
+
+We recursively update an estimate of the posterior distribution $p(y_{i}|x_1,\ldots,x_t)$ for any ROIs that have previously be identified, while using a $\chi^2$ criterion to decide whether or not to introduce new ROIs at each time step. Given our likelihood has independent noise for each voxel, and the prior on ROI shape is uninformative, the posterior over ROI shape is always a Gaussian with diagonal covariance, meaning the updates are extremely simple and fast. Thus our approach can be seen as a hybrid of Bayesian and frequentist approaches where, whenever possible, we have made design choices to favor simplicity and scalability over statistical correctness.
+
+The first phase, finding regional maxima in one frame, is a standard method for identifying cell bodies in biological data. It's a common enough method that it's given here as a tutorial problem: {\tt http://pythonvision.org/basic-tutorial}. The Gaussian blur and regional maxima steps are accelerated using Matlab's own GPU-optimized functions, and I wrote a custom C++ implementation of the watershed algorithm to avoid the overhead of computing watershed regions where the smoothed data is below a certain threshold. The kernel width and threshold are free parameters I tuned by hand on a small number of frames.
+
+The second phase, which can be run in parallel with the first phase, finds the firing rates of neurons identified in previous steps by least squares regression:
+\[\hat{\beta}_t = \arg\min_\beta ||x_t - \mathbb{E}[Y|x_1,\ldots,x_{t-1}]\beta||^2_2\]
+where $\mathbb{E}[Y|x_1,\ldots,x_{t-1}]$ is the matrix of posterior means. We implement this regression by LSQR, a conjugate gradient type method which scales to very large regression problems (when the number of ROIs is very large, simply computing a pseudoinverse becomes computationally intractable). Because LSQR can also be used for ridge regression, we could conceivably place a iid Gaussian prior on the rates at each time step, though we have not found this necessary in practice. If this is the first frame, then this step is skipped and every watershed region is identified with a new ROI.
+
+The third phase compares the watershed regions from the first phase with the residual $x_t - \mathbb{E}[Y|x_1,\ldots,x_{t-1}]\hat{\beta}_t$ from the second phase, and for each watershed either matches it to an existing ROI and updates its posterior or creates a new ROI. To determine whether a watershed corresponds to an existing ROI, we use two criteria. First, if the maximum of a watershed is close enough to an ROI, we match the watershed with that ROI. If a watershed is not close enough to any existing ROIs, we rescale the residual inside the part of each watershed that overlaps existing ROIs according to the variance in (\ref{eqn:roi_generative_model}) so that the residual should have unit variance. If the cumulative probability under a $\chi^2$ distribution exceeds a threshold we conclude that there is a new ROI in this watershed, with mean shape given by the residual. If not, we find the ROI that maximizes $\sum_{i\in \Omega_j} (\hat{r}_{kt} \mathbb{E}[y_{ik}|x_1,\ldots,x_{t-1}])^2$, where $\Omega_j$ is the set of voxels in the $j$th watershed, and expand that ROI to include all the voxels in that watershed.  The posterior update for the mean and variance of every voxel in an ROI is then given by
+
+\begin{eqnarray}
+\mathbb{E}[y_{ik}|x_1,\ldots,x_t] & = & \label{eqn:roi_posterior_mean} \\
+\mathrm{Var}[y_{ik}|x_1,\ldots,x_t] & = & \label{eqn:roi_posterior_var}
+\end{eqnarray}
+
+Having run the updates above on every frame of data, we clean up the shape of the identified ROIs by ICA. Sometimes we erroneously combine part of one ROI with another, and ICA separates these cases very cleanly, so long as the number of ROIs is correct.
+
+\end{document}  
