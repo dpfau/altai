@@ -18,7 +18,7 @@ echo $RNG
 if [[ -z "$RNG" ]]; then
 	echo "Hello World"
 else
-	echo "Goodbye World"
+	echo "Goodbye $RNG"
 fi
 
 #End of script
