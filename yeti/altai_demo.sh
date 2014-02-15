@@ -14,7 +14,7 @@
 #PBS -o localhost:/vega/stats/users/dbp2112/ahrens/results/
 #PBS -e localhost:/vega/stats/users/dbp2112/ahrens/results/
 
-if [[ -z "$RNG" ]]
+if [[ -z "$RNG" ]]; then
 	matlab-R2012b -nosplash -nodisplay -nodesktop -r "tRng = $RNG; demo" > matoutfile
 else
 	matlab-R2012b -nosplash -nodisplay -nodesktop -r "demo" > matoutfile
