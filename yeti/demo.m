@@ -96,7 +96,7 @@ for t = tRng
             params.varSlope = foo(2);
             for i = 1:numROI
                 rng = ROIRng(ROIOffset(:,i));
-                ROIPrecs(:,:,:,i) = tryGather( old_intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*old_intensity(i)) );
+                ROIPrecs(:,:,:,i) = old_intensity(i)^2 .* logical(ROIShapes(:,:,:,i)) / (params.var + params.varSlope*old_intensity(i));
             end
         end
 
