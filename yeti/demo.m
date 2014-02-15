@@ -16,6 +16,7 @@ ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel i
 ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
+ROITimes = sparse(1000,1e5); % index all the times at which a given ROI appears
 OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 
 vec = @(x)x(:);
@@ -163,6 +164,7 @@ for t = tRng
                 ROIShapes(:,:,:,numROI) = tryGather( residual(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );
                 ROIPrecs(:,:,:,numROI) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
                 ROIPower(numROI) = intensity(i)^2;
+                ROITimes(t,numROI) = 1;
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
@@ -173,11 +175,13 @@ for t = tRng
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
                 ROIPrecs(:,:,:,j) = tryGather( ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
+                ROITimes(t,j) = 1;
             end
         end
         ROIShapes(isnan(ROIShapes)) = 0;
     else
         numROI = numROI + length(regmax);
+        ROITimes(t,1:numROI) = 1;
         for i = 1:numROI
             [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
             ROIOffset(:,i) = int32(ROICenter(:,i));
@@ -202,4 +206,4 @@ ROIPrecs  = ROIPrecs(:,:,:,1:numROI);
 ROIOffset = ROIOffset(:,1:numROI);
 ROICenter = ROICenter(:,1:numROI);
 ROIPower  = ROIPower(1:numROI);
-save ROI_results numROI ROIShapes ROIPrecs ROIOffset ROICenter ROIPower OutOfBounds
+save ROI_results numROI ROIShapes ROIPrecs ROIOffset ROICenter ROIPower ROITimes OutOfBounds
