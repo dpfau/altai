@@ -70,6 +70,7 @@ for t = tRng
     largeEnough = arrayfun(@(i)nnz(watersheds==i)>params.minSize,1:length(regmax));
     regmax = regmax(largeEnough);
     xRegmax = xRegmax(largeEnough); yRegmax = yRegmax(largeEnough); zRegmax = zRegmax(largeEnough);
+    intensity = intensity(largeEnough);
     regmaxSub = regmaxSub(largeEnough,:);
     j = 0;
     for i = 1:length(largeEnough)
