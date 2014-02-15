@@ -9,7 +9,7 @@ params.autoVar = true; % automatically compute baseline variance and linear depe
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
 params.minSize = 30; % minimum number of pixels to consider in a watershed
-params.maxSize = prod(roiSz); % maximum number of pixels to consider in a watershed (set extremely high at the moment)
+params.maxSize = prod(params.roiSz); % maximum number of pixels to consider in a watershed (set extremely high at the moment)
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
