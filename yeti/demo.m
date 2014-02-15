@@ -8,8 +8,8 @@ params.minDist = 3; % minimum distance below which two ROI are considered the sa
 params.autoVar = true; % automatically compute baseline variance and linear dependence on firing rate
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
-params.minSize = 30; % minimum number of pixels to consider in a watershed
-params.maxSize = prod(params.roiSz); % maximum number of pixels to consider in a watershed (set extremely high at the moment)
+% params.minSize = 30; % minimum number of pixels to consider in a watershed
+% params.maxSize = prod(params.roiSz); % maximum number of pixels to consider in a watershed (set extremely high at the moment)
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
@@ -67,11 +67,6 @@ for t = tRng
     else
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
     end
-    largeEnough = arrayfun(@(i)nnz(watersheds==i)>params.minSize,1:length(regmax));
-    regmax = regmax(largeEnough);
-    xRegmax = xRegmax(largeEnough); yRegmax = yRegmax(largeEnough); zRegmax = zRegmax(largeEnough);
-    intensity = intensity(largeEnough);
-    regmaxSub = regmaxSub(largeEnough,:);
     j = 0;
     for i = 1:length(largeEnough)
         if largeEnough(i)
