@@ -67,15 +67,6 @@ for t = tRng
     else
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
     end
-    j = 0;
-    for i = 1:length(largeEnough)
-        if largeEnough(i)
-            j = j+1;
-            watersheds(watersheds==i) = j;
-        else
-            watersheds(watersheds==i) = 0;
-        end
-    end
     fprintf('W');
 
     % should probably drop this section into its own function
