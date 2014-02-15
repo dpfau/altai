@@ -122,14 +122,15 @@ for t = tRng
         for i = 1:length(regmax)
             if assignment(i) == 0
                 % Get region within watershed that overlaps other ROIs
-                rng = ROIRng([xRegmax(i);yRegmax(i);zRegmax(i)]);
                 if gpuDeviceCount
                     region = gpuArray.false(size(watersheds));
                 else
                     region = false(size(watersheds));
                 end
                 for j = 1:length(allNeighbors{i})
-                    region(rng{:}) = region(rng{:}) | ROIShapes(:,:,:,allNeighbors{i}(j));
+                    idx = allNeighbors{i}(j);
+                    rng = ROIRng(ROIOffset(:,idx));
+                    region(rng{:}) = region(rng{:}) | ROIShapes(:,:,:,idx);
                 end
                 region = region & watersheds == i;
 
@@ -140,11 +141,11 @@ for t = tRng
                 if (1 - chi2cdf(error1,tryGather(nnz(region)))) * (1 - chi2cdf(error2,3)) > params.pval
                     % Assign regional maximum to ROI with greatest power
                     pow = zeros(length(allNeighbors{i}),1);
-                    for ii = 1:length(allNeighbors{i})
-                        idx = allNeighbors{i}(ii);
+                    for j = 1:length(allNeighbors{i})
+                        idx = allNeighbors{i}(j);
                         rng = ROIRng(ROIOffset(:,idx));
                         ROIShape = ROIShapes(:,:,:,idx);
-                        pow(ii) = norm(rates(idx)*vec(ROIShape(region(rng{:}))));
+                        pow(j) = norm(rates(idx)*vec(ROIShape(region(rng{:}))));
                     end
                     [~,jj] = max(pow);
                     assignment(i) = allNeighbors{i}(jj);
