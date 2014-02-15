@@ -8,7 +8,8 @@ params.minDist = 3; % minimum distance below which two ROI are considered the sa
 params.autoVar = true; % automatically compute baseline variance and linear dependence on firing rate
 params.maxROI = 1e5;
 params.pval = 1e-14; % very strict.
-params.posVar = 5; % Variance in the ROI position. Should set higher than the actual variance, to be robust to noise, but still low enough that it stops outrageous things.
+params.minSize = 30; % minimum number of pixels to consider in a watershed
+params.maxSize = prod(roiSz); % maximum number of pixels to consider in a watershed (set extremely high at the moment)
 
 numROI = int32(0);
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole sparse array. Expanding as we go is slow and dumb.
@@ -46,9 +47,11 @@ for t = tRng
     [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
     regmaxSub = [xRegmax,yRegmax,zRegmax];
     inBounds = ~any( regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))<0 | regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))>params.sz(ones(numRegmax,1),:), 2 );
+
     regmax = regmax(inBounds);
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
     regmaxSub = regmaxSub(inBounds,:);
+
     if gpuDeviceCount
         intensity = gather(gpuDataBlur(gpuRegmax));
     else
@@ -63,6 +66,19 @@ for t = tRng
         watersheds = gpuArray(watersheds);
     else
         fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+    end
+    largeEnough = arrayfun(@(i)nnz(watersheds==i)>params.minSize,1:length(regmax));
+    regmax = regmax(largeEnough);
+    xRegmax = xRegmax(largeEnough); yRegmax = yRegmax(largeEnough); zRegmax = zRegmax(largeEnough);
+    regmaxSub = regmaxSub(largeEnough,:);
+    j = 0;
+    for i = 1:length(largeEnough)
+        if largeEnough(i)
+            j = j+1;
+            watersheds(watersheds==i) = j;
+        else
+            watersheds(watersheds==i) = 0;
+        end
     end
     fprintf('W');
 
