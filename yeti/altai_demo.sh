@@ -16,9 +16,9 @@
 
 echo $RNG
 if [[ -z "$RNG" ]]; then
-	matlab-R2012b -nosplash -nodisplay -nodesktop -r "tRng = $RNG; demo" > matoutfile
-else
 	matlab-R2012b -nosplash -nodisplay -nodesktop -r "demo" > matoutfile
+else
+	matlab-R2012b -nosplash -nodisplay -nodesktop -r "tRng = $RNG; demo" > matoutfile
 fi
 
 #End of script
