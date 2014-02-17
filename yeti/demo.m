@@ -165,7 +165,7 @@ for t = tRng
                 [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
                 ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
                 rng = ROIRng(ROIOffset(:,numROI));
-                ROIShapes(:,:,:,numROI) = tryGather( residual(rng{:}) .* sqrt(residVar(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) ); % remember to re-scale the residual back to what it originally was
+                ROIShapes(:,:,:,numROI) = tryGather( residual(rng{:}) .* sqrt(residVar(rng{:})) .* (watersheds(rng{:})==i) / intensity(i) ); % remember to re-scale the residual back to what it originally was
                 ROIPrecs(:,:,:,numROI) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
                 ROIPower(numROI) = intensity(i)^2;
                 ROITimes(t,numROI) = 1;
