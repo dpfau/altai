@@ -1,7 +1,7 @@
 clear params
 params.sig = 5;
 params.dz = 12.5;
-params.thresh = 0.01;
+params.thresh = 0.006;
 params.roiSz = [40,40,3]; % Max size of an ROI
 params.sz = [1024,2048,43];
 params.minDist = 3; % minimum distance below which two ROI are considered the same
