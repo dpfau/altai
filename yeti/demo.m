@@ -92,7 +92,9 @@ for t = tRng
                 region = watersheds==idx(i);
                 rng = ROIRng(ROIOffset(:,assignment(idx(i))));
                 region(rng{:}) = region(rng{:}) & ROIShapes(:,:,:,idx(i));
-                vars(i) = tryGather( var(residual(region)) );
+                if nnz(region)>30
+                    vars(i) = tryGather( var(residual(region)) );
+                end
             end
             foo = pinv([new_rates+new_rates.^2./old_rates, 1+new_rates.^2./old_rates.^2])*vars;
             params.var = foo(1);
