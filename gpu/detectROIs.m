@@ -83,7 +83,7 @@ for t = params.tRng
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
-        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', [xRegmax,yRegmax,zRegmax*params.dz], 'K', 1);
+        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', regmaxSub/diag(params.sig), 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
         numNeighbors = nnz(nnDistance < params.minDist);
         if params.autoVar && ~isfield(params,'varSlope') % estimate the dependence of the variance on the firing rate
@@ -125,7 +125,7 @@ for t = params.tRng
         
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
-        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',[xRegmax,yRegmax,zRegmax*params.dz], max(params.roiSz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
+        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',regmaxSub/diag(params.sig), max(params.roiSz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         numChi2 = 0; % number of regional maxima merged into existing ROIs because they passed a Chi^2 test
         for i = 1:length(regmax)
             if assignment(i) == 0
@@ -144,7 +144,7 @@ for t = params.tRng
 
                 % See if residual passes Chi^2 test
                 error1 = tryGather(norm(residual(region))^2); % scale of the residual in the overlap between ROI and watershed
-                distance = ROICenter(:,nearestNeighbors(i))-double([xRegmax(i);yRegmax(i);zRegmax(i)]);
+                distance = ROICenter(:,nearestNeighbors(i))-double(regmaxSub(:,i)');
                 error2 = distance'/diag([params.minDist^2, params.minDist^2, (params.minDist/params.dz)^2])*distance; % scaled distance between the nearest neighbor ROI and the regional maximum
                 if (1 - chi2cdf(error1,tryGather(nnz(region)))) * (1 - chi2cdf(error2,3)) > params.pval
                     % Assign regional maximum to ROI with greatest power
@@ -180,7 +180,7 @@ for t = params.tRng
                 ROIShapes(patchrng{:},j) = tryGather( (ROIPrecs(patchrng{:},j) .* ROIShapes(patchrng{:},j) + ...
                     intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
                 (ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i))) );
-                ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double([xRegmax(i); yRegmax(i); zRegmax(i)]))...
+                ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double(regmaxSub(:,i)'))...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
                 ROIPrecs(patchrng{:},j) = tryGather( ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
