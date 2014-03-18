@@ -20,13 +20,13 @@ for t = params.tRng
     data = params.loadframe(t);
     fprintf('%d: ',t);
     if gpuDeviceCount
-        gpuDataBlur = blur(gpuArray(data), [params.sig, params.sig, params.sig/params.dz]);
+        gpuDataBlur = blur(gpuArray(data), params.sig);
         fprintf('B');
 
         gpuRegmax = int32(find(myregionalmax(gpuDataBlur-params.thresh)));
         regmax = gather(gpuRegmax);
     else
-        dataBlur = blur(data, [params.sig, params.sig, params.sig/params.dz]);
+        dataBlur = blur(data, params.sig);
         fprintf('B');
 
         regmax = int32(find(myregionalmax(dataBlur-params.thresh)));
