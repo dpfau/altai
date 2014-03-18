@@ -1,10 +1,12 @@
 function ROI = detectROIs(params)
 
 numROI = int32(0);
+datadim = length(params.sz);
+
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole array. Expanding as we go is slow and dumb.
 ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
-ROIOffset = zeros(3,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
-ROICenter = zeros(3,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
+ROIOffset = zeros(datadim,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
+ROICenter = zeros(datadim,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
 ROITimes = sparse(1000,1e5); % index all the times at which a given ROI appears
 OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
@@ -30,12 +32,25 @@ for t = params.tRng
         regmax = int32(find(myregionalmax(dataBlur-params.thresh)));
     end
     numRegmax = length(regmax);
-    [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
-    regmaxSub = [xRegmax,yRegmax,zRegmax];
-    inBounds = ~any( regmaxSub - int32(floor(params.roiSz(ones(numRegmax,1),:)/2))<=0 | regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))>params.sz(ones(numRegmax,1),:), 2 );
+    
+    if datadim == 2
+        [xRegmax, yRegmax] = ind2sub(params.sz,regmax);
+        regmaxSub = [xRegmax,yRegmax];
+    else
+        [xRegmax, yRegmax, zRegmax] = ind2sub(params.sz,regmax);
+        regmaxSub = [xRegmax,yRegmax,zRegmax];
+    end
+    
+    
+    inBounds = ~any( regmaxSub - int32(floor(params.roiSz(ones(numRegmax,1),:)/2))<=0 | ...
+                     regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))>params.sz(ones(numRegmax,1),:), 2 );
 
     regmax = regmax(inBounds);
-    xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); zRegmax = zRegmax(inBounds);
+    xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); 
+    
+    if datadim == 3
+        zRegmax = zRegmax(inBounds);
+    end
     regmaxSub = regmaxSub(inBounds,:);
 
     if gpuDeviceCount
@@ -175,7 +190,11 @@ for t = params.tRng
         numROI = numROI + length(regmax);
         ROITimes(t,1:numROI) = 1;
         for i = 1:numROI
-            [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
+            if datadim == 2
+                [ROICenter(1,i), ROICenter(2,i)] = ind2sub(params.sz,regmax(i));
+            else
+                [ROICenter(1,i), ROICenter(2,i), ROICenter(3,i)] = ind2sub(params.sz,regmax(i));
+            end
             ROIOffset(:,i) = int32(ROICenter(:,i));
             rng = ROIRng(ROIOffset(:,i));
             ROIShapes(:,:,:,i) = tryGather( data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );

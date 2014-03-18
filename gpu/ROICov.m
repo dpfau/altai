@@ -2,10 +2,12 @@ function C = ROICov(ROIShapes,ROIOffset)
 % Fast computation of covariance between ROI shapes
 
 sz = size(ROIShapes);
-C = sparse(sz(4),sz(4));
+C = sparse(sz(end),sz(end));
 warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
-neighbors = rangesearch(double(ROIOffset)'/diag(sz(1:3)), double(ROIOffset)'/diag(sz(1:3)), 1, 'NSMethod', 'kdtree', 'Distance', 'chebychev');
-for i = 1:sz(4)
+neighbors = rangesearch(double(ROIOffset)'/diag(sz(1:end-1)), ...
+                        double(ROIOffset)'/diag(sz(1:end-1)), 1, ...
+                        'NSMethod', 'kdtree', 'Distance', 'chebychev');
+for i = 1:sz(end)
     for j = 1:length(neighbors{i})
         k = neighbors{i}(j);
         C(i,k) = ROIDot(ROIShapes(:,:,:,i),ROIShapes(:,:,:,k),ROIOffset(:,i),ROIOffset(:,k));
