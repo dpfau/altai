@@ -145,7 +145,7 @@ for t = params.tRng
                 % See if residual passes Chi^2 test
                 error1 = tryGather(norm(residual(region))^2); % scale of the residual in the overlap between ROI and watershed
                 distance = ROICenter(:,nearestNeighbors(i))-double(regmaxSub(:,i)');
-                error2 = distance'/diag([params.minDist^2, params.minDist^2, (params.minDist/params.dz)^2])*distance; % scaled distance between the nearest neighbor ROI and the regional maximum
+                error2 = distance'/diag(params.sig)/params.minDist^2*distance; % scaled distance between the nearest neighbor ROI and the regional maximum
                 if (1 - chi2cdf(error1,tryGather(nnz(region)))) * (1 - chi2cdf(error2,3)) > params.pval
                     % Assign regional maximum to ROI with greatest power
                     pow = zeros(length(allNeighbors{i}),1);
