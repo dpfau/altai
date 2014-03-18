@@ -3,6 +3,8 @@ function ROI = detectROIs(params)
 numROI = int32(0);
 datadim = length(params.sz);
 
+patchrng = arrayfun(@(x)1:x,params.roiSz,'UniformOutput',0);
+
 ROIShapes = zeros([params.roiSz,params.maxROI]); % Initialize the whole array. Expanding as we go is slow and dumb.
 ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel in the ROI.
 ROIOffset = zeros(datadim,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
@@ -92,7 +94,7 @@ for t = params.tRng
             for i = 1:numNeighbors
                 region = watersheds==idx(i);
                 rng = ROIRng(ROIOffset(:,assignment(idx(i))));
-                region(rng{:}) = region(rng{:}) & ROIShapes(:,:,:,idx(i));
+                region(rng{:}) = region(rng{:}) & ROIShapes(patchrng{:},idx(i));
                 if nnz(region)>30
                     vars(i) = tryGather( var(residual(region)) );
                 end
@@ -102,7 +104,7 @@ for t = params.tRng
             params.varSlope = foo(2);
             for i = 1:numROI
                 rng = ROIRng(ROIOffset(:,i));
-                ROIPrecs(:,:,:,i) = old_intensity(i)^2 .* logical(ROIShapes(:,:,:,i)) / (params.var + params.varSlope*old_intensity(i));
+                ROIPrecs(patchrng{:},i) = old_intensity(i)^2 .* logical(ROIShapes(patchrng{:},i)) / (params.var + params.varSlope*old_intensity(i));
             end
         end
 
@@ -110,8 +112,8 @@ for t = params.tRng
         residVar = params.var*ones(size(residual));
         for i = 1:numROI
             rng = ROIRng(ROIOffset(:,i));
-            residVarUpdate = params.var * rates(i) * logical(ROIPrecs(:,:,:,i)) + rates(i)^2./ROIPrecs(:,:,:,i);
-            residVarUpdate(~logical(ROIPrecs(:,:,:,i))) = 0;
+            residVarUpdate = params.var * rates(i) * logical(ROIPrecs(patchrng{:},i)) + rates(i)^2./ROIPrecs(patchrng{:},i);
+            residVarUpdate(~logical(ROIPrecs(patchrng{:},i))) = 0;
             try
                 residVar(rng{:}) = residVar(rng{:}) + residVarUpdate;
             catch e
@@ -136,7 +138,7 @@ for t = params.tRng
                 for j = 1:length(allNeighbors{i})
                     idx = allNeighbors{i}(j);
                     rng = ROIRng(ROIOffset(:,idx));
-                    region(rng{:}) = region(rng{:}) | ROIShapes(:,:,:,idx);
+                    region(rng{:}) = region(rng{:}) | ROIShapes(patchrng{:},idx);
                 end
                 region = region & watersheds == i;
 
@@ -150,7 +152,7 @@ for t = params.tRng
                     for j = 1:length(allNeighbors{i})
                         idx = allNeighbors{i}(j);
                         rng = ROIRng(ROIOffset(:,idx));
-                        ROIShape = ROIShapes(:,:,:,idx);
+                        ROIShape = ROIShapes(patchrng{:},idx);
                         pow(j) = norm(rates(idx)*vec(ROIShape(region(rng{:}))));
                     end
                     [~,jj] = max(pow);
@@ -168,20 +170,20 @@ for t = params.tRng
                 [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
                 ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
                 rng = ROIRng(ROIOffset(:,numROI));
-                ROIShapes(:,:,:,numROI) = tryGather( residual(rng{:}) .* sqrt(residVar(rng{:})) .* (watersheds(rng{:})==i) / intensity(i) ); % remember to re-scale the residual back to what it originally was
-                ROIPrecs(:,:,:,numROI) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
+                ROIShapes(patchrng{:},numROI) = tryGather( residual(rng{:}) .* sqrt(residVar(rng{:})) .* (watersheds(rng{:})==i) / intensity(i) ); % remember to re-scale the residual back to what it originally was
+                ROIPrecs(patchrng{:},numROI) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
                 ROIPower(numROI) = intensity(i)^2;
                 ROITimes(t,numROI) = 1;
             else % merge ROI
                 j = assignment(i);
                 rng = ROIRng(ROIOffset(:,j));
-                ROIShapes(:,:,:,j) = tryGather( (ROIPrecs(:,:,:,j) .* ROIShapes(:,:,:,j) + ...
+                ROIShapes(patchrng{:},j) = tryGather( (ROIPrecs(patchrng{:},j) .* ROIShapes(patchrng{:},j) + ...
                     intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
-                (ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i))) );
+                (ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i))) );
                 ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double([xRegmax(i); yRegmax(i); zRegmax(i)]))...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
-                ROIPrecs(:,:,:,j) = tryGather( ROIPrecs(:,:,:,j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
+                ROIPrecs(patchrng{:},j) = tryGather( ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
                 ROITimes(t,j) = 1;
             end
         end
@@ -197,9 +199,9 @@ for t = params.tRng
             end
             ROIOffset(:,i) = int32(ROICenter(:,i));
             rng = ROIRng(ROIOffset(:,i));
-            ROIShapes(:,:,:,i) = tryGather( data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );
+            ROIShapes(patchrng{:},i) = tryGather( data(rng{:}) .* (watersheds(rng{:})==i) / intensity(i) );
             if ~params.autoVar
-                ROIPrecs(:,:,:,i) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
+                ROIPrecs(patchrng{:},i) = tryGather( intensity(i)^2 .* (watersheds(rng{:})==i) / (params.var + params.varSlope*intensity(i)) );
             end
         end
         ROIPower(1:numROI) = intensity.^2;
@@ -212,8 +214,8 @@ for t = params.tRng
     end
     fprintf('\t Found %d regional maxima: %d neighbors, %d pass Chi^2, %d new, %d total ROI, %gs\n', length(regmax), numNeighbors, numChi2, length(regmax)-numNeighbors-numChi2, numROI, toc);
 end
-ROIShapes = ROIShapes(:,:,:,1:numROI);
-ROIPrecs  = ROIPrecs(:,:,:,1:numROI);
+ROIShapes = ROIShapes(patchrng{:},1:numROI);
+ROIPrecs  = ROIPrecs(patchrng{:},1:numROI);
 ROIOffset = ROIOffset(:,1:numROI);
 ROICenter = ROICenter(:,1:numROI);
 ROIPower  = ROIPower(1:numROI);
@@ -227,8 +229,8 @@ function ROI = makeROIStruct(numROI,ROIShapes,ROIPrecs,ROIOffset,ROICenter,ROIPo
 
 ROI = [];
 for i = 1:numROI
-    ROI{i}.shape = ROIShapes(:,:,:,i);
-    ROI{i}.prec  = ROIPrecs(:,:,:,i);
+    ROI{i}.shape = ROIShapes(patchrng{:},i);
+    ROI{i}.prec  = ROIPrecs(patchrng{:},i);
     ROI{i}.offset = ROIOffset(:,i);
     ROI{i}.center = ROICenter(:,i);
     ROI{i}.power = ROIPower(i);
