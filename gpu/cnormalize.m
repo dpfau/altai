@@ -1,27 +1,12 @@
-function [ output_args ] = cnormalize( input_args )
-% Anisotropic Gaussian blur. Works fine on regular matrices, but really shines on GPU.
+function J = cnormalize( I, sigSub, sigDiv  )
+% Contrast-Normalize an image
+%
+% Input:
+%   I - the image to normalize
+%   sigSub - the kernel width for subtractive normalization
+%   sigDiv - the kernel width for divisive normalization
 %
 % David Pfau, 2014
 
-if length(sig) == 1 % isotropic case
-    sig = sig*ones(1,ndims(data));
-end
-assert(ndims(data)==length(sig));
-n = ndims(data);
-
-datablur = data;
-for i = 1:n
-    if sig(i)
-        x = size(data,i);
-        idx = 1:n;
-        idx(i) = 1;
-        idx(1) = i;
-        bump = exp(-fftshift(floor(-x/2):floor(x/2-1)).^2/sig(i)^2)'/sqrt(2*pi)/sig(i);
-        if isa(data,'gpuArray')
-	       bump = gpuArray(bump);
-	   end
-        datablur = ifft(bsxfun(@times,fft(datablur,[],i),permute(fft(bump),idx)),[],i);
-    end
-end 
-
-datablur = real(datablur);
+J = I - blur( I, sigSub );
+J = J ./ blur( J.^2 - blur( J, sigDiv ).^2, sigDiv );
