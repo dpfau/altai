@@ -79,7 +79,7 @@ end
 
 fprintf('...Added %d new regions of interest',nnz(new_roi));
 
-if isfield(params,'optose') && params.optose == true
+if isfield(params,'optose') && params.optose
     h = zeros(nMax,1); % handles to the text objects in each frame
     figure(61)
     colormap gray
@@ -95,4 +95,7 @@ if isfield(params,'optose') && params.optose == true
         scatter(ROI(i).pos(2),ROI(i).pos(1),100,'bo','LineWidth',2);
     end
     drawnow
+    if params.optose == 2
+        writeVideo(params.vidObj, getframe(gca));
+    end
 end
