@@ -53,7 +53,7 @@ for t = params.tRng
     if datadim == 3
         zRegmax = zRegmax(inBounds);
     end
-    regmaxSub = regmaxSub(inBounds,:);
+    regmaxSub = double(regmaxSub(inBounds,:));
 
     if gpuDeviceCount
         intensity = gather(gpuDataBlur(gpuRegmax));
@@ -235,4 +235,4 @@ for i = 1:numROI
     ROI{i}.center = ROICenter(:,i);
     ROI{i}.power = ROIPower(i);
     ROI{i}.times = ROITimes(:,i);
-end
+end                                        
