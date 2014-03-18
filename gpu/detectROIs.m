@@ -63,12 +63,16 @@ for t = params.tRng
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
 
-    if gpuDeviceCount
-        fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
-        clear gpuDataBlur
-        watersheds = gpuArray(watersheds);
+    if params.watershedFlag
+        if gpuDeviceCount
+            fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
+            clear gpuDataBlur
+            watersheds = gpuArray(watersheds);
+        else
+            fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+        end
     else
-        fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+        watersheds = double(watershed(-dataBlur)) .* (dataBlur > params.thresh);
     end
     fprintf('W');
 
