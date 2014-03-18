@@ -83,7 +83,7 @@ for t = params.tRng
 
         % Compute nearest neighbors, if regional maxima are close enough to ROI centers, merge them together
         warning('off','stats:KDTreeSearcher:knnsearch:DataConversion');
-        [nearestNeighbors, nnDistance] = knnsearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))', regmaxSub/diag(params.sig), 'K', 1);
+        [nearestNeighbors, nnDistance] = knnsearch((ROICenter(:,1:numROI))'/diag(params.sig), regmaxSub/diag(params.sig), 'K', 1);
         assignment(nnDistance < params.minDist) = nearestNeighbors(nnDistance < params.minDist);
         numNeighbors = nnz(nnDistance < params.minDist);
         if params.autoVar && ~isfield(params,'varSlope') % estimate the dependence of the variance on the firing rate
@@ -125,7 +125,7 @@ for t = params.tRng
         
         % Get index of ROIs that overlap regional maxima
         warning('off','stats:KDTreeSearcher:rangesearch:DataConversion'); % don't need to hear about my conversions
-        allNeighbors = rangesearch((diag([1,1,params.dz])*ROICenter(:,1:numROI))',regmaxSub/diag(params.sig), max(params.roiSz .* [1,1,params.dz]), 'NSMethod', 'kdtree', 'Distance', 'chebychev');
+        allNeighbors = rangesearch((ROICenter(:,1:numROI))'/diag(params.roiSz), regmaxSub/diag(params.roiSz), 1, 'NSMethod', 'kdtree', 'Distance', 'chebychev');
         numChi2 = 0; % number of regional maxima merged into existing ROIs because they passed a Chi^2 test
         for i = 1:length(regmax)
             if assignment(i) == 0
