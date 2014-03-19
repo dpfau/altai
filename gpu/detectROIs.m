@@ -63,12 +63,16 @@ for t = params.tRng
     OutOfBounds = OutOfBounds + sum(~inBounds);
     fprintf('M');
 
-    if gpuDeviceCount
-        fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
-        clear gpuDataBlur
-        watersheds = gpuArray(watersheds);
+    if params.watershedFlag
+        if gpuDeviceCount
+            fastwatershed(gather(gpuDataBlur-params.thresh), watersheds, regmax);
+            clear gpuDataBlur
+            watersheds = gpuArray(watersheds);
+        else
+            fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+        end
     else
-        fastwatershed(dataBlur-params.thresh, watersheds, regmax);
+        watersheds = double(watershed(-dataBlur)) .* (dataBlur > params.thresh);
     end
     fprintf('W');
 
@@ -144,7 +148,7 @@ for t = params.tRng
 
                 % See if residual passes Chi^2 test
                 error1 = tryGather(norm(residual(region))^2); % scale of the residual in the overlap between ROI and watershed
-                distance = ROICenter(:,nearestNeighbors(i))-double(regmaxSub(:,i)');
+                distance = ROICenter(:,nearestNeighbors(i))-double(regmaxSub(i,:)');
                 error2 = distance'/diag(params.sig)/params.minDist^2*distance; % scaled distance between the nearest neighbor ROI and the regional maximum
                 if (1 - chi2cdf(error1,tryGather(nnz(region)))) * (1 - chi2cdf(error2,3)) > params.pval
                     % Assign regional maximum to ROI with greatest power
@@ -166,8 +170,11 @@ for t = params.tRng
             if assignment(i) == 0 % create new ROI
                 numROI = numROI + 1;
                 if numROI > params.maxROI, pause; end
-
-                [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
+                if datadim == 2
+                    [ROICenter(1,numROI), ROICenter(2,numROI)] = ind2sub(params.sz,regmax(i));
+                elseif datadim == 3
+                    [ROICenter(1,numROI), ROICenter(2,numROI), ROICenter(3,numROI)] = ind2sub(params.sz,regmax(i));
+                end
                 ROIOffset(:,numROI) = int32(ROICenter(:,numROI));
                 rng = ROIRng(ROIOffset(:,numROI));
                 ROIShapes(patchrng{:},numROI) = tryGather( residual(rng{:}) .* sqrt(residVar(rng{:})) .* (watersheds(rng{:})==i) / intensity(i) ); % remember to re-scale the residual back to what it originally was
@@ -180,7 +187,7 @@ for t = params.tRng
                 ROIShapes(patchrng{:},j) = tryGather( (ROIPrecs(patchrng{:},j) .* ROIShapes(patchrng{:},j) + ...
                     intensity(i)*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) .* data(rng{:})) ./ ... % this line right here might be why sometimes we get multiple ROIs mixed together. And why aren't we updating all ROIs?
                 (ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i))) );
-                ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double(regmaxSub(:,i)'))...
+                ROICenter(:,j) = (ROIPower(j) * ROICenter(:,j) + intensity(i).^2 * double(regmaxSub(i,:)'))...
                     /(ROIPower(j) + intensity(i).^2);
                 ROIPower(j) = ROIPower(j) + intensity(i)^2;
                 ROIPrecs(patchrng{:},j) = tryGather( ROIPrecs(patchrng{:},j) + intensity(i)^2*(watersheds(rng{:})==i)/(params.var + params.varSlope*intensity(i)) );
@@ -227,12 +234,16 @@ function ROI = makeROIStruct(numROI,ROIShapes,ROIPrecs,ROIOffset,ROICenter,ROIPo
 % fields. This is really an intermediate step, that should precede the whole function being rewritten
 % to work with structs from the start
 
+roiSz = size(ROIShapes);
+roiSz = roiSz(1:end-1);
+patchrng = arrayfun(@(x)1:x,roiSz,'UniformOutput',0);
+
 ROI = [];
 for i = 1:numROI
-    ROI{i}.shape = ROIShapes(patchrng{:},i);
-    ROI{i}.prec  = ROIPrecs(patchrng{:},i);
-    ROI{i}.offset = ROIOffset(:,i);
-    ROI{i}.center = ROICenter(:,i);
-    ROI{i}.power = ROIPower(i);
-    ROI{i}.times = ROITimes(:,i);
-end                                        
+    ROI(i).shape = ROIShapes(patchrng{:},i);
+    ROI(i).prec  = ROIPrecs(patchrng{:},i);
+    ROI(i).offset = ROIOffset(:,i);
+    ROI(i).center = ROICenter(:,i);
+    ROI(i).power = ROIPower(i);
+    ROI(i).times = ROITimes(:,i);
+end
