@@ -48,6 +48,8 @@ for t = params.tRng
                      regmaxSub + int32(floor(params.roiSz(ones(numRegmax,1),:)/2))>params.sz(ones(numRegmax,1),:), 2 );
 
     regmax = regmax(inBounds);
+    % Update gpuRegmax?
+    gpuRegmax = regmax;
     xRegmax = xRegmax(inBounds); yRegmax = yRegmax(inBounds); 
     
     if datadim == 3
@@ -55,7 +57,7 @@ for t = params.tRng
     end
     regmaxSub = double(regmaxSub(inBounds,:));
 
-    if gpuDeviceCount
+    if gpuDeviceCount        
         intensity = gather(gpuDataBlur(gpuRegmax));
     else
         intensity = dataBlur(regmax);
@@ -72,9 +74,26 @@ for t = params.tRng
             fastwatershed(dataBlur-params.thresh, watersheds, regmax);
         end
     else
+        if gpuDeviceCount
+            dataBlur = gather(gpuDataBlur);
+        end
         watersheds = double(watershed(-dataBlur)) .* (dataBlur > params.thresh);
     end
     fprintf('W');
+    
+    % DEBUG: Set the threshold based on watershed.
+    h = figure();
+    subplot(2,1,1);
+    imagesc(gather(gpuDataBlur));
+    colorbar();
+    colormap gray;
+    axis image;
+    subplot(2,1,2);
+    imagesc(watersheds);
+    colorbar();
+    axis image;
+    saveas(h, sprintf('watershed_%d.png', t));
+    close(h);
 
     % should probably drop this section into its own function
     if numROI > 0

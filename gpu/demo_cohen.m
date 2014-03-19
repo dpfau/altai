@@ -2,13 +2,13 @@ clear params
 addpath(fullfile('..','util'));
 % tifdir = fullfile('/','Users','scott','Projects','cohen','data','coke_can_08_01');
 tifdir = fullfile('C:','Users','scott','Projects','cohen','data','Take 1_Arch_2ms_exp', 'tifs');
-% tifdir = fullfile('/', 'group','hips','scott',...
-%                   'data','cohen','2013_08_01_coke_can_wt','tifs');
+tifdir = fullfile('/', 'group','hips','scott',...
+                  'data','cohen','2013_08_01_coke_can_wt','tifs');
 tifinfo = get_cohen_info(tifdir);
 
 params.sig = [5,5];
 params.dz = 1;
-params.thresh = 500;
+params.thresh = 1200;
 params.roiSz = [60,60]; % Max size of an ROI
 
 % Get 3-dim image size (x,y,1)

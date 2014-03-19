@@ -28,11 +28,12 @@ if exist(fullfile(tifdir, 'meanimg.mat'), 'file') > 0
 else
     fprintf('Computing the mean image\n');
     meanimg = zeros(imsize);
-    for t = 2:nframes
+    downsample = 10;
+    for t = 2:downsample:nframes
         if mod(t,100) == 0
             fprintf('%d/%d\n', t, nframes);
         end
-        tmp = imread(fullfile(tifdir, flist(t).name));
+        tmp = double(imread(fullfile(tifdir, flist(t).name)));
         meanimg = meanimg + tmp;
     end
     fprintf('\n');
