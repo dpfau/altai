@@ -27,18 +27,22 @@ if exist(fullfile(tifdir, 'meanimg.mat'), 'file') > 0
     load(fullfile(tifdir, 'meanimg.mat'));
 else
     fprintf('Computing the mean image\n');
-    meanimg = zeros(imsize);
     downsample = 10;
+    nnframes = length(2:downsample:nframes);
+    imgs = zeros(horzcat(imsize,nnframes));
+    i = 0;
     for t = 2:downsample:nframes
+        i = i+1;
         if mod(t,100) == 0
             fprintf('%d/%d\n', t, nframes);
         end
-        tmp = double(imread(fullfile(tifdir, flist(t).name)));
-        meanimg = meanimg + tmp;
+        imgs(:,:,i) = double(imread(fullfile(tifdir, flist(t).name)));
     end
     fprintf('\n');
 
-    meanimg = double(meanimg) / nframes;
+    meanimg = mean(imgs,3);
+    imgs = reshape(bsxfun(@minus,imgs,meanimg),prod(imsize),nnframes);
+    [u,s,v] = svd(imgs,0);
 
     % Save the meanimg for reuse
     save(fullfile(tifdir, 'meanimg.mat'), 'meanimg');
@@ -48,6 +52,7 @@ tifinfo.flist = flist;
 tifinfo.imsize = imsize;
 tifinfo.nframes = nframes;
 tifinfo.meanimg = meanimg;
+tifinfo.zca = @(img) reshape(u*(diag(1./diag(s))*(u'*reshape(img,prod(imsize),1))),imsize);
 
 end
 
