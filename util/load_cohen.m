@@ -9,5 +9,8 @@ frame = double(imread(fullfile(tifdir, tifinfo.flist(t).name)));
 % Subtract off the mean image
 frame = frame - tifinfo.meanimg;
 
+% Call ZCA
+frame = tifinfo.zca(frame);
+
 end
 

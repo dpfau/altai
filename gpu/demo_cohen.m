@@ -4,11 +4,11 @@ addpath(fullfile('..','util'));
 tifdir = fullfile('C:','Users','scott','Projects','cohen','data','Take 1_Arch_2ms_exp', 'tifs');
 tifdir = fullfile('/', 'group','hips','scott',...
                   'data','cohen','2013_08_01_coke_can_wt','tifs');
-tifinfo = get_cohen_info(tifdir);
+tifinfo = get_cohen_info(tifdir, 1000, 1099);
 
-params.sig = [5,5];
+params.sig = [10,10];
 params.dz = 1;
-params.thresh = 1200;
+params.thresh = 15;
 params.roiSz = [60,60]; % Max size of an ROI
 
 % Get 3-dim image size (x,y,1)
@@ -23,7 +23,7 @@ params.watershedFlag = false;
 if exist('tRng','var')
     params.tRng = tRng;
 else
-    params.tRng = [1:10]; 
+    params.tRng = [1:100]; 
 end
 
 % params.loadframe = @(t) double(imread(fullfile(tifdir, tifinfo.flist(t).name)));
@@ -34,3 +34,5 @@ params.loadframe = @(t) load_cohen(t, tifdir, tifinfo);
 
 ROI = detectROIs(params);
 save ROI_results ROI
+
+

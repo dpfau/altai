@@ -90,6 +90,8 @@ for t = params.tRng
     axis image;
     subplot(2,1,2);
     imagesc(watersheds);
+    hold on
+    scatter(yRegmax, xRegmax, 'ro');
     colorbar();
     axis image;
     saveas(h, sprintf('watershed_%d.png', t));
