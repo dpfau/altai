@@ -81,21 +81,21 @@ for t = params.tRng
     end
     fprintf('W');
     
-    % DEBUG: Set the threshold based on watershed.
-    h = figure();
-    subplot(2,1,1);
-    imagesc(gather(gpuDataBlur));
-    colorbar();
-    colormap gray;
-    axis image;
-    subplot(2,1,2);
-    imagesc(watersheds);
-    hold on
-    scatter(yRegmax, xRegmax, 'ro');
-    colorbar();
-    axis image;
-    saveas(h, sprintf('watershed_%d.png', t));
-    close(h);
+%     % DEBUG: Set the threshold based on watershed.
+%     h = figure();
+%     subplot(2,1,1);
+%     imagesc(gather(gpuDataBlur));
+%     colorbar();
+%     colormap gray;
+%     axis image;
+%     subplot(2,1,2);
+%     imagesc(watersheds);
+%     hold on
+%     scatter(yRegmax, xRegmax, 'ro');
+%     colorbar();
+%     axis image;
+%     saveas(h, sprintf('watershed_%d.png', t));
+%     close(h);
 
     % should probably drop this section into its own function
     if numROI > 0
