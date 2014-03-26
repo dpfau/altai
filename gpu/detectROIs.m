@@ -10,7 +10,7 @@ ROIPrecs  = zeros([params.roiSz,params.maxROI]); % the precision of each pixel i
 ROIOffset = zeros(datadim,params.maxROI,'int32'); % Location of the ROIs. Fixed from the start, integer precision
 ROICenter = zeros(datadim,params.maxROI); % Slightly different from ROIOffset. Double precision, updated online, used to decide if two ROI are close enough to merge.
 ROIPower  = zeros(1,params.maxROI); % sum of squared firing rates over all ROIs
-ROITimes = sparse(1000,1e5); % index all the times at which a given ROI appears
+ROITimes = sparse(1000,params.maxROI); % index all the times at which a given ROI appears
 OutOfBounds = 0; % track the number of ROIs we toss out (should be negligible)
 
 vec = @(x)x(:);
@@ -77,7 +77,14 @@ for t = params.tRng
         if gpuDeviceCount
             dataBlur = gather(gpuDataBlur);
         end
-        watersheds = double(watershed(-dataBlur)) .* (dataBlur > params.thresh);
+        watersheds_ = double(watershed(-dataBlur)) .* (dataBlur > params.thresh);
+        % relabel the watersheds so they match up with the order of the
+        % regional maxima
+        watersheds = zeros(size(watersheds_));
+        for i = 1:length(regmax)
+            watersheds(watersheds_==watersheds_(regmax(i))) = i;
+        end
+        clear watersheds_
     end
     fprintf('W');
     
@@ -215,7 +222,11 @@ for t = params.tRng
                 ROITimes(t,j) = 1;
             end
         end
-        ROIShapes(isnan(ROIShapes)) = 0;
+        % It is ridiculously faster to do this on the subset that matters
+        % instead of the entire array ROIShapes
+        ROIShapes_ = ROIShapes(patchrng{:},1:numROI);
+        ROIShapes_(isnan(ROIShapes_)) = 0;
+        ROIShapes(patchrng{:},1:numROI) = ROIShapes_;
     else
         numROI = numROI + length(regmax);
         ROITimes(t,1:numROI) = 1;
